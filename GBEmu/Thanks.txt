@@ -1,0 +1,6 @@
+﻿Thanks to StackOverflow for giving me an idea on how to draw fast to the
+screen.
+
+Thanks to Martin Korth, whose docs proved to be invaluable.
+
+Thanks to the maker of gambatte for his program's implementation of MBC2.

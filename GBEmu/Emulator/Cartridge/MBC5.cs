@@ -44,20 +44,6 @@ namespace GBEmu.Emulator.Cartridge
 			}
 		}
 
-		public override byte Read(int position)
-		{
-			if (position < 0x4000) return romFile[position];
-			else if (position < 0x8000)
-			{
-				return romFile[(bankNum * 0x4000) + position - 0x4000];
-			}
-			else if (position > 0x9FFF && position < 0xC000 && RamEnabled)
-			{
-				return externalRamMap[externalRamBank, position - 0xA000];
-			}
-			else return 0;
-		}
-
 		public override void Write(int position, byte value)
 		{
 			#region 0000-1FFF

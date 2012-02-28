@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace GBEmu.Emulator.Cartridge
+﻿namespace GBEmu.Emulator.Cartridge
 {
 	class MBC1 : Cart
 	{
@@ -38,26 +33,6 @@ namespace GBEmu.Emulator.Cartridge
 			{
 				externalRamMap = new byte[0, 0];
 			}
-		}
-
-		public override byte Read(int position)
-		{
-			if (position < 0x4000) return romFile[position];
-			else if (position < 0x8000)
-			{
-				if (mbc1_IsMemoryModel_16_8)
-				{
-					int bknm = (bankNum & 0x1F) | (externalRamBank & 0x03);
-					return romFile[(bknm * 0x4000) + position - 0x4000];
-				}
-				else return romFile[(bankNum * 0x4000) + position - 0x4000];
-			}
-			else if (position > 0x9FFF && position < 0xC000 && RamEnabled)
-			{
-				if (mbc1_IsMemoryModel_16_8) return externalRamMap[0, position - 0xA000];
-				else return externalRamMap[externalRamBank, position - 0xA000];
-			}
-			else return 0;
 		}
 
 		public override void Write(int position, byte value)

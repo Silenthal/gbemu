@@ -152,7 +152,20 @@ namespace GBEmu.Emulator.Cartridge
 			FileLoaded = true;
 		}
 
-		public abstract byte Read(int position);
+		public byte Read(int position)
+		{
+			if (position < 0x4000) return romFile[position];
+			else if (position < 0x8000)
+			{
+				return romFile[(bankNum * 0x4000) + position - 0x4000];
+			}
+			else if (position > 0x9FFF && position < 0xC000 && RamEnabled)
+			{
+				return externalRamMap[externalRamBank, position - 0xA000];
+			}
+			else return 0;
+		}
+
 		public abstract void Write(int position, byte value);
 		protected abstract void InitializeOutsideRAM();
 	}

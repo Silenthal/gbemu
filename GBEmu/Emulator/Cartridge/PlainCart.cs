@@ -37,38 +37,24 @@
 
 		public override void Write(int position, byte value)
 		{
-			#region 0000-1FFF
-			if (position < 0x2000)
+			if (position >= 0)
 			{
-
+				if (position < 0x8000)
+				{
+					#region 0000-1FFF
+					if (position < 0x2000)
+					{
+						//xxxx0101 == on
+						//xxxx0000 == off
+						RamEnabled = ((value & 0x0F) == 0x0A);
+					}
+					#endregion	
+				}
+				else
+				{
+					CartRamWrite(position, value);
+				}
 			}
-			#endregion
-			#region 2000-2FFF
-			if (position < 0x3000)
-			{
-
-			}
-			#endregion
-			#region 3000-3FFF
-			else if (position > 0x3000 && position < 0x4000)
-			{
-				bankNum = value & 0x0F;
-			}
-			#endregion
-			#region 4000-5FFF
-			#endregion
-			#region 6000-7FFF
-			else if (position >= 0x6000 && position < 0x8000 && RamEnabled)
-			{
-
-			}
-			#endregion
-			#region A000-BFFF
-			else if (position > 0x9FFF & position < 0xC000 & RamEnabled)
-			{
-				externalRamMap[externalRamBank, position - 0xA000] = value;
-			}
-			#endregion
 		}
 	}
 }

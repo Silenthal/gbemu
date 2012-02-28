@@ -166,6 +166,13 @@ namespace GBEmu.Emulator.Cartridge
 			else return 0;
 		}
 
+		protected void CartRamWrite(int position, byte value)
+		{
+			if (position < 0xA000 || (position - 0xA000) >= externalRamMap.GetLength(1)) return;
+			if (!RamEnabled) return;
+			externalRamMap[externalRamBank, position - 0xA000] = value;
+		}
+
 		public abstract void Write(int position, byte value);
 		protected abstract void InitializeOutsideRAM();
 	}

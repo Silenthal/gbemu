@@ -46,6 +46,7 @@ namespace GBEmu.Emulator.Cartridge
 
 		public override void Write(int position, byte value)
 		{
+			if (position < 0) return;
 			#region 0000-1FFF
 			if (position < 0x2000)
 			{

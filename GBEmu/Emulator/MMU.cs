@@ -215,8 +215,6 @@ namespace GBEmu.Emulator
             }
         }
 
-        
-
         public override void Write(int position, byte value)
         {
             if (position < 0x8000) cart.Write(position, value);

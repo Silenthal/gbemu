@@ -2,11 +2,11 @@
 {
 	class MBC1 : Cart
 	{
-		private bool mbc1_IsMemoryModel_16_8;
+		private bool RamBankMode;
 
 		public MBC1(byte[] inFile) : base(inFile)
 		{
-			mbc1_IsMemoryModel_16_8 = true;
+			RamBankMode = true;
 		}
 
 		protected override void InitializeOutsideRAM()
@@ -26,58 +26,81 @@
 						break;
 					default:
 						externalRamMap = new byte[0, 0];
+						features ^= CartFeatures.RAM;
 						break;
 				}
 			}
 			else
 			{
 				externalRamMap = new byte[0, 0];
+				features ^= CartFeatures.RAM;
 			}
 		}
 
 		public override void Write(int position, byte value)
 		{
-			#region 0000-1FFF
-			if (position < 0x2000)
+			if (position >= 0)
 			{
-				RamEnabled = ((value & 0x0F) == 0x0A);
-			}
-			#endregion
-			#region 3000-3FFF
-			else if (position >= 0x3000 && position < 0x4000)
-			{
-				//Writes to 2000-3FFF will:
-				//MBC1: Write ROM Bank number ***BBBBB (0 => 1)
-				if (value == 0)
+				if (position < 0x8000)
 				{
-					bankNum = 1;
+					#region 0000-1FFF
+					if (position < 0x2000)
+					{
+						//xxxx0101 == on
+						//xxxx0000 == off
+						RamEnabled = ((value & 0x0F) == 0x0A);
+					}
+					#endregion
+					#region 2000-3FFF
+					else if (position < 0x4000)
+					{
+						//xxxBBBBB = Bank No.
+						if (RamBankMode)
+						{
+							bankNum = (value & 0x1F);
+						}
+						else
+						{
+							//0xxBBBBB
+							//x is other half of banknum, B is what is set here
+							bankNum = (bankNum & 0x60) | (value & 0x1F);
+						}
+						if (bankNum == 0)
+						{
+							bankNum = 1;
+						}
+					}
+					#endregion
+					#region 4000-5FFF
+					else if (position < 0x6000)
+					{
+						//Writes to 4000-5FFF will:
+						//MBC1: Write RAM Bank number ******BB (4/32 RamBankMode)
+						//MBC1: Write ROM upper bank num *BB***** (16/8)
+						if (RamBankMode)
+						{
+							externalRamBank = (byte)(value & 0x03);
+						}
+						else
+						{
+							bankNum = (bankNum & 0x1F) | ((value & 0x03) << 5);
+						}
+					}
+					#endregion
+					#region 6000-7FFF
+					else if (position < 0x8000 && RamEnabled)
+					{
+						//Writes to 6000-7FFF will:
+						//MBC1: Change memory model from 16/8 to 4/32
+						RamBankMode = ((value & 1) != 0);
+					}
+					#endregion
 				}
-				else bankNum = (value & 0x1F);
+				else
+				{
+					CartRamWrite(position, value);
+				}
 			}
-			#endregion
-			#region 4000-5FFF
-			else if (position < 0x6000)
-			{
-				//Writes to 4000-5FFF will:
-				//MBC1: Write RAM Bank number ******BB (4/32)
-				//MBC1: Write ROM upper bank num ******BB (16/8)
-				externalRamBank = (byte)(value & 0x3);
-			}
-			#endregion
-			#region 6000-7FFF
-			else if (position < 0x8000 && RamEnabled)
-			{
-				//Writes to 6000-7FFF will:
-				//MBC1: Change memory model from 16/8 to 4/32
-				mbc1_IsMemoryModel_16_8 = ((value & 1) == 0);
-			}
-			#endregion
-			#region A000-BFFF
-			else if (position > 0x9FFF & position < 0xC000 & RamEnabled)
-			{
-				externalRamMap[externalRamBank, position - 0xA000] = value;
-			}
-			#endregion
 		}
 	}
 }

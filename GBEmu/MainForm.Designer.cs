@@ -1,4 +1,4 @@
-﻿namespace GBRead
+﻿namespace GBEmu
 {
     partial class MainForm
     {
@@ -48,7 +48,7 @@
             this.deLabel = new System.Windows.Forms.Label();
             this.bcLabel = new System.Windows.Forms.Label();
             this.afLabel = new System.Windows.Forms.Label();
-            this.gdiWindow1 = new GBRead.GdiWindow();
+            this.gdiWindow1 = new GBEmu.Render.Gdi.GdiWindow();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -275,7 +275,7 @@
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.Button button1;
-        private GdiWindow gdiWindow1;
+        private GBEmu.Render.Gdi.GdiWindow gdiWindow1;
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.RichTextBox richTextBox1;

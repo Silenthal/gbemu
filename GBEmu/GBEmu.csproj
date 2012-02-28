@@ -8,7 +8,7 @@
     <ProjectGuid>{03627D66-70E1-4D1D-BD98-B9D3C488BDBA}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>GBRead</RootNamespace>
+    <RootNamespace>GBEmu</RootNamespace>
     <AssemblyName>gbread</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -109,7 +109,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Emulator\Audio.cs" />
-    <Compile Include="Emulator\Cartridge.cs" />
+    <Compile Include="Emulator\Cartridge\Cart.cs" />
+    <Compile Include="Emulator\Cartridge\MBC1.cs" />
+    <Compile Include="Emulator\Cartridge\MBC2.cs" />
+    <Compile Include="Emulator\Cartridge\MBC3.cs" />
+    <Compile Include="Emulator\Cartridge\MBC4.cs" />
+    <Compile Include="Emulator\Cartridge\MBC5.cs" />
+    <Compile Include="Emulator\Cartridge\PlainCart.cs" />
     <Compile Include="Emulator\CommonBus.cs" />
     <Compile Include="Emulator\CPU.cs" />
     <Compile Include="Emulator\GBSystem.cs" />
@@ -156,6 +162,7 @@
   <ItemGroup>
     <Content Include="Thanks.txt" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

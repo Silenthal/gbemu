@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
-using GBRead.Emulator;
+using GBEmu.Emulator;
 
-namespace GBRead
+namespace GBEmu
 {
     static class Program
     {

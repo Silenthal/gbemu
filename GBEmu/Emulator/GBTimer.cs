@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using NAudio;
 
-namespace GBRead.Emulator
+namespace GBEmu.Emulator
 {
     class GBTimer : IODevice
     {

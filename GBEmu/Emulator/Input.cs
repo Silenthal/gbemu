@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GBRead.Emulator
+namespace GBEmu.Emulator
 {
     public enum GBKeys : byte { Up = 0x14, Down = 0x18, Left = 0x12, Right = 0x11, A = 0x1, B = 0x2, Start = 0x8, Select = 0x4 };
     class Input : IODevice

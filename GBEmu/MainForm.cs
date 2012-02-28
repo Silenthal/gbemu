@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Windows.Forms;
-using GBRead.Emulator;
 using System.Threading;
+using System.Windows.Forms;
+using GBEmu.Emulator;
+using GBEmu.Render.Gdi;
 
-namespace GBRead
+namespace GBEmu
 {
 
     public partial class MainForm : Form

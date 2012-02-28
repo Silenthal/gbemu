@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace GBRead.Emulator
+namespace GBEmu.Emulator
 {
     public class GBColor
     {

@@ -5,8 +5,9 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Threading;
+using GBEmu.Render.Gdi;
 
-namespace GBRead.Emulator
+namespace GBEmu.Emulator
 {
     class GBSystem
     {

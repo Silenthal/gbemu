@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using GBEmu.Emulator.Cartridge;
 
-namespace GBRead.Emulator
+namespace GBEmu.Emulator
 {
     class MMU : IODevice
     {
         public Input input;
         public GBTimer timer = new GBTimer();
-        public Cartridge cart;
+        public Cart cart;
         public Video LCD;
         public Serial serial = new Serial();
         public Audio audio = new Audio();
@@ -117,7 +118,7 @@ namespace GBRead.Emulator
 
         public MMU(byte[] inFile)
         {
-            cart = new Cartridge(inFile);
+            cart = CartLoader.LoadCart(inFile);
             input = new Input();
             LCD = new Video();
             initializeInternalRAM();

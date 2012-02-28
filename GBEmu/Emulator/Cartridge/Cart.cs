@@ -38,7 +38,7 @@ namespace GBEmu.Emulator.Cartridge
 		HuC1_RB = 0xFF
 	}
 	[Flags]
-	public enum CartFeatures
+	public enum CartFeatures : byte
 	{
 		None = 0x0,
 		RAM = 0x1,
@@ -49,6 +49,7 @@ namespace GBEmu.Emulator.Cartridge
 
 	public class CartLoader
 	{
+		#region List of cart features
 		private static Dictionary<CartridgeType, CartFeatures> FeatureList = new Dictionary<CartridgeType, CartFeatures>()
 		{
 			{CartridgeType.MBC1, CartFeatures.None}, 
@@ -61,9 +62,6 @@ namespace GBEmu.Emulator.Cartridge
 			{CartridgeType.MBC3_RB, CartFeatures.RAM | CartFeatures.Battery}, 
 			{CartridgeType.MBC3_TB, CartFeatures.Timer | CartFeatures.Battery}, 
 			{CartridgeType.MBC3_TRB, CartFeatures.Timer | CartFeatures.RAM | CartFeatures.Battery}, 
-			{CartridgeType.MBC4, CartFeatures.None}, 
-			{CartridgeType.MBC4_R, CartFeatures.RAM}, 
-			{CartridgeType.MBC4_RB, CartFeatures.RAM | CartFeatures.Battery}, 
 			{CartridgeType.MBC5, CartFeatures.None}, 
 			{CartridgeType.MBC5_M, CartFeatures.None}, 
 			{CartridgeType.MBC5_MR, CartFeatures.None}, 
@@ -74,6 +72,7 @@ namespace GBEmu.Emulator.Cartridge
 			{CartridgeType.ROM_R, CartFeatures.RAM}, 
 			{CartridgeType.ROM_RB, CartFeatures.RAM | CartFeatures.Battery}
 		};
+		#endregion
 		public static Cart LoadCart(byte[] romFile)
 		{
 			CartridgeType cs = (CartridgeType)romFile[0x147];
@@ -81,10 +80,20 @@ namespace GBEmu.Emulator.Cartridge
 			#region MBC
 			switch (cs)
 			{
+				case CartridgeType.ROM:
+				case CartridgeType.ROM_R:
+				case CartridgeType.ROM_RB:
+				default:
+					returnedCart = new PlainCart(romFile);
+					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_R:
 				case CartridgeType.MBC1_RB:
 					returnedCart = new MBC1(romFile);
+					break;
+				case CartridgeType.MBC2:
+				case CartridgeType.MBC2_B:
+					returnedCart = new MBC2(romFile);
 					break;
 				case CartridgeType.MBC3:
 				case CartridgeType.MBC3_TB:
@@ -101,24 +110,7 @@ namespace GBEmu.Emulator.Cartridge
 				case CartridgeType.MBC5_RB:
 					returnedCart = new MBC5(romFile);
 					break;
-				case CartridgeType.MBC4:
-				case CartridgeType.MBC4_R:
-				case CartridgeType.MBC4_RB:
-					returnedCart = new MBC4(romFile);
-					break;
-				case CartridgeType.MBC2:
-				case CartridgeType.MBC2_B:
-					returnedCart = new MBC2(romFile);
-					break;
-
-				case CartridgeType.ROM:
-				case CartridgeType.ROM_R:
-				case CartridgeType.ROM_RB:
-				default:
-					returnedCart = new PlainCart(romFile);
-					break;
 			}
-			
 			#endregion
 			returnedCart.features = FeatureList[cs];
 			return returnedCart;
@@ -132,17 +124,17 @@ namespace GBEmu.Emulator.Cartridge
 
 		public bool FileLoaded { get; protected set; }
 		protected bool RamEnabled = false;
-		protected int bankNum = 1;
+		protected int RomBank;
 
 		public CartFeatures features;
 
-		public bool RamPresent { get { return (features & CartFeatures.RAM) == CartFeatures.RAM; } }
-		public bool BatteryPresent { get { return (features & CartFeatures.Battery) == CartFeatures.Battery; } }
-		public bool RumblePresent { get { return (features & CartFeatures.Rumble) == CartFeatures.Rumble; } }
-		public bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
+		protected bool RamPresent { get { return (features & CartFeatures.RAM) == CartFeatures.RAM; } }
+		protected bool BatteryPresent { get { return (features & CartFeatures.Battery) == CartFeatures.Battery; } }
+		protected bool RumblePresent { get { return (features & CartFeatures.Rumble) == CartFeatures.Rumble; } }
+		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
 
-		protected byte[,] externalRamMap = new byte[1, 0x2000]; // 0xA000 - 0xBFFF
-		protected byte externalRamBank = 0;
+		protected byte[,] CartRam = new byte[1, 0x2000]; // 0xA000 - 0xBFFF
+		protected byte CartRamBank = 0;
 
 		protected Cart(byte[] inFile)
 		{
@@ -150,6 +142,35 @@ namespace GBEmu.Emulator.Cartridge
 			Array.Copy(inFile, romFile, inFile.Length);
 			InitializeOutsideRAM();
 			FileLoaded = true;
+			RomBank = 1;
+		}
+
+		protected virtual void InitializeOutsideRAM()
+		{
+			if (RamPresent)
+			{
+				switch (romFile[0x149])
+				{
+					case 0x01:
+						CartRam = new byte[1, 0x800];//A000-A7FF, 2 kilobytes
+						break;
+					case 0x02:
+						CartRam = new byte[1, 0x2000];//A000-BFFF, 8 kilobytes
+						break;
+					case 0x03:
+						CartRam = new byte[4, 0x2000];//A000-BFFF x 4, 32 kilobytes
+						break;
+					default:
+						CartRam = new byte[0, 0];
+						features ^= CartFeatures.RAM;
+						break;
+				}
+			}
+			else
+			{
+				CartRam = new byte[0, 0];
+				features ^= CartFeatures.RAM;
+			}
 		}
 
 		public byte Read(int position)
@@ -157,23 +178,44 @@ namespace GBEmu.Emulator.Cartridge
 			if (position < 0x4000) return romFile[position];
 			else if (position < 0x8000)
 			{
-				return romFile[(bankNum * 0x4000) + position - 0x4000];
+				return romFile[(RomBank * 0x4000) + position - 0x4000];
 			}
-			else if (position > 0x9FFF && position < 0xC000 && RamEnabled)
+			else if (position > 0x9FFF && position < 0xC000)
 			{
-				return externalRamMap[externalRamBank, position - 0xA000];
+				return CartRamRead(position);
 			}
 			else return 0;
 		}
 
-		protected void CartRamWrite(int position, byte value)
+		protected virtual byte CartRamRead(int position)
 		{
-			if (position < 0xA000 || (position - 0xA000) >= externalRamMap.GetLength(1)) return;
-			if (!RamEnabled) return;
-			externalRamMap[externalRamBank, position - 0xA000] = value;
+			if (!RamEnabled) return 0;
+			if ((position - 0xA000) >= CartRam.GetLength(1)) return 0;
+			return CartRam[CartRamBank, position - 0xA000];
 		}
 
-		public abstract void Write(int position, byte value);
-		protected abstract void InitializeOutsideRAM();
+		public void Write(int position, byte value)
+		{
+			if (position >= 0)
+			{
+				if (position < 0x8000)
+				{
+					MBCWrite(position, value);
+				}
+				else if (position >= 0xA000 && position < 0xC000)
+				{
+					CartRamWrite(position, value);
+				}
+			}
+		}
+
+		protected abstract void MBCWrite(int position, byte value);
+
+		protected virtual void CartRamWrite(int position, byte value)
+		{
+			if ((position - 0xA000) >= CartRam.GetLength(1)) return;
+			if (!RamEnabled) return;
+			CartRam[CartRamBank, position - 0xA000] = value;
+		}
 	}
 }

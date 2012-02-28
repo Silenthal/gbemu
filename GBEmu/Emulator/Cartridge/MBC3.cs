@@ -4,18 +4,21 @@ namespace GBEmu.Emulator.Cartridge
 {
 	class MBC3 : Cart
 	{
-		private bool IsLatchOn = false;
-		private byte[] rtc = new byte[5];
+		private bool RTCActive;
+		private byte[] RTC;
 		private DateTime LastLatchTime;
-		private byte[] lastRtc = new byte[5];
-		private byte rtcReg = 0;
+		private byte RTCRegister;
+		private byte LastLatchWrite;
 
 		public MBC3(byte[] inFile) : base(inFile)
 		{
-
+			RTC = new byte[5];
+			RTCRegister = 0;
+			LastLatchWrite = 0xFF;
+			RTCActive = false;
 		}
 
-		public void ClockTick()
+		public void LatchTime()
 		{
 			//RTC registers are like so:
 			//[0] = Seconds
@@ -29,14 +32,14 @@ namespace GBEmu.Emulator.Cartridge
 			//plus the time difference between then and now.
 			
 			//If Stop Timer (6th bit of DH) is set, return with the old time in rtc.
-			if ((rtc[4] & 0x40) == 1)
+			if ((RTC[4] & 0x40) == 1)
 			{
 				return;
 			}
 			//Else, latch new time.
-			TimeSpan s = new TimeSpan(((rtc[4] & 1) << 9) | rtc[3], rtc[2], rtc[1], rtc[0]);
+			TimeSpan s = new TimeSpan(((RTC[4] & 1) << 9) | RTC[3], RTC[2], RTC[1], RTC[0]);
 			DateTime temp = DateTime.Now;
-			s += temp - LastLatchTime;
+			if (LastLatchTime != null) s += temp - LastLatchTime;
 			LastLatchTime = temp;
 			bool over = false;
 			if (s > TimeSpan.FromDays(511))
@@ -49,58 +52,43 @@ namespace GBEmu.Emulator.Cartridge
 				over = true;
 			}
 			//Write new times.
-			rtc[0] = (byte)s.Seconds;
-			rtc[1] = (byte)s.Minutes;
-			rtc[2] = (byte)s.Hours;
-			rtc[3] = (byte)s.Days;
-			rtc[4] = (byte)((rtc[4] & 0xFE) | (s.Days >> 8));
+			RTC[0] = (byte)s.Seconds;
+			RTC[1] = (byte)s.Minutes;
+			RTC[2] = (byte)s.Hours;
+			RTC[3] = (byte)s.Days;
+			RTC[4] = (byte)((RTC[4] & 0xFE) | (s.Days >> 8));
 			if (over)
 			{
 				//Overflow will set the last bit of DH
-				rtc[4] |= 0x80;
+				RTC[4] |= 0x80;
 			}
 		}
 
-		protected override void InitializeOutsideRAM()
+		protected override byte CartRamRead(int position)
 		{
-			if (RamPresent)
+			if (RamEnabled && TimerPresent && RTCActive)
 			{
-				switch (romFile[0x149])
-				{
-					case 0x01:
-						externalRamMap = new byte[1, 0x800];//A000-A7FF, 2 kilobytes
-						break;
-					case 0x02:
-						externalRamMap = new byte[1, 0x2000];//A000-BFFF, 8 kilobytes
-						break;
-					case 0x03:
-						externalRamMap = new byte[4, 0x2000];//A000-BFFF x 4, 32 kilobytes
-						break;
-					default:
-						externalRamMap = new byte[0, 0];
-						break;
-				}
+				return RTC[RTCRegister];
 			}
-			else
-			{
-				externalRamMap = new byte[0, 0];
-			}
+			else return base.CartRamRead(position);
 		}
 
-		public override void Write(int position, byte value)
+		protected override void MBCWrite(int position, byte value)
 		{
 			#region 0000-1FFF
 			if (position < 0x2000)
 			{
+				//xxxx0101 == on
+				//xxxx0000 == off
 				RamEnabled = ((value & 0x0F) == 0x0A);
 			}
 			#endregion
-			#region 3000-3FFF
-			else if (position >= 0x3000 && position < 0x4000)
+			#region 2000-3FFF
+			else if (position < 0x4000)
 			{
-				//Writes to 2000-3FFF will:
-				//MBC3: Write ROM Bank number *BBBBBBB
-				bankNum = value & 0x7F;
+				//MBC3: Write ROM Bank number 
+				//*BBBBBBB
+				RomBank = value & 0x7F;
 			}
 			#endregion
 			#region 4000-5FFF
@@ -109,23 +97,38 @@ namespace GBEmu.Emulator.Cartridge
 				//Writes to 4000-5FFF will:
 				//MBC3: Write RTC register number if val is >= 0x8
 				//MBC3: Write RAM Bank number ******BB
-				if (TimerPresent && ((value & 8) != 0) && value <= 0xD)
+				if (value < 8)
 				{
-					rtcReg = (byte)(value & 0x7);
+					CartRamBank = (byte)(value & 0x03);
+					RTCActive = false;
 				}
-				else externalRamBank = (byte)(value & 0x03);
+				if (TimerPresent && value >= 8 && value < 0xD)
+				{
+					RTCRegister = (byte)(value - 8);
+					RTCActive = true;
+				}
 			}
 			#endregion
-			#region A000-BFFF
-			else if (position > 0x9FFF & position < 0xC000 & RamEnabled)
+			#region 6000-7FFF
+			else if (position < 0x8000)
 			{
-				if (TimerPresent && IsLatchOn)
+				if (LastLatchWrite == 0 && value == 1)
 				{
-					rtc[rtcReg] = value;
+					LatchTime();
 				}
-				else externalRamMap[externalRamBank, position - 0xA000] = value;
+				LastLatchWrite = value;
 			}
 			#endregion
+		}
+
+		protected override void CartRamWrite(int position, byte value)
+		{
+			if (!RamEnabled) return;
+			if (TimerPresent && RTCActive)
+			{
+				RTC[RTCRegister] = value;
+			}
+			else base.CartRamWrite(position, value);
 		}
 	}
 }

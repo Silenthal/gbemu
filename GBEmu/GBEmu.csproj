@@ -113,7 +113,6 @@
     <Compile Include="Emulator\Cartridge\MBC1.cs" />
     <Compile Include="Emulator\Cartridge\MBC2.cs" />
     <Compile Include="Emulator\Cartridge\MBC3.cs" />
-    <Compile Include="Emulator\Cartridge\MBC4.cs" />
     <Compile Include="Emulator\Cartridge\MBC5.cs" />
     <Compile Include="Emulator\Cartridge\PlainCart.cs" />
     <Compile Include="Emulator\CommonBus.cs" />

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GBEmu.Emulator
 {
-    class Audio : IODevice
+    class Audio : TimedIODevice
     {
         public override byte Read(int position)
         {

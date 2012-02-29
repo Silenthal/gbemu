@@ -44,7 +44,7 @@ namespace GBEmu.Emulator
     }
     public enum LCDMode : byte { Mode0, Mode1, Mode2, Mode3 }
 
-    class Video : IODevice
+    class Video : TimedIODevice
     {
         public int ExecutedFrameCycles { get { return CycleCounter; } }
         public bool IsCGB { get; set; }
@@ -1090,7 +1090,5 @@ namespace GBEmu.Emulator
             if (LY >= LYLimit) LY = 0;
             if (LY == LYCompare && LYCCoincidenceInterruptEnabled) LCDCInterruptRequest = true;
         }
-
-
     }
 }

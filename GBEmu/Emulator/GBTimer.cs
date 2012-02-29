@@ -6,7 +6,7 @@ using NAudio;
 
 namespace GBEmu.Emulator
 {
-    class GBTimer : IODevice
+    class GBTimer : TimedIODevice
     {
         private int TIMACounter;
 

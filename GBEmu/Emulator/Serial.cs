@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GBEmu.Emulator
 {
-    class Serial : IODevice
+    class Serial : TimedIODevice
     {
         public byte SerialInterrupt { get { return 0; } }
 

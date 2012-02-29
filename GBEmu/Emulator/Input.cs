@@ -6,7 +6,7 @@ using System.Text;
 namespace GBEmu.Emulator
 {
     public enum GBKeys : byte { Up = 0x14, Down = 0x18, Left = 0x12, Right = 0x11, A = 0x1, B = 0x2, Start = 0x8, Select = 0x4 };
-    class Input : IODevice
+    class Input : IReadWriteCapable
     {
         private byte LineEnabled = 0x30;
         public byte Joy1
@@ -40,20 +40,15 @@ namespace GBEmu.Emulator
             
         }
 
-        public override byte Read(int position)
+        public byte Read(int position)
         {
             if (position == 0xFF00) return Joy1;
             else return 0;
         }
 
-        public override void Write(int position, byte data)
+        public void Write(int position, byte data)
         {
             if (position == 0xFF00) Joy1 = data;
-        }
-
-        public override void UpdateCounter(int cycles)
-        {
-            
         }
 
         public void KeyChange(GBKeys key, bool isDPad, bool isDown)

@@ -39,63 +39,6 @@ namespace GBEmu.Emulator
 		private byte InterruptFlag;
 		private byte[] HRAM = new byte[0x7F];
 
-		#region Memory Location Names
-		public const byte P1 = 0x0;
-		public const byte SB = 0x1;
-		public const byte SC = 0x2;
-		public const byte DIV = 0x4;
-		public const byte TIMA = 0x5;
-		public const byte TMA = 0x6;
-		public const byte TAC = 0x7;
-		public const byte IF = 0xF;
-		public const byte NR10 = 0x10;
-		public const byte NR11 = 0x11;
-		public const byte NR12 = 0x12;
-		public const byte NR13 = 0x13;
-		public const byte NR14 = 0x14;
-		public const byte NR21 = 0x16;
-		public const byte NR22 = 0x17;
-		public const byte NR23 = 0x18;
-		public const byte NR24 = 0x19;
-		public const byte NR30 = 0x1A;
-		public const byte NR31 = 0x1B;
-		public const byte NR32 = 0x1C;
-		public const byte NR33 = 0x1D;
-		public const byte NR34 = 0x1E;
-		public const byte NR41 = 0x20;
-		public const byte NR42 = 0x21;
-		public const byte NR43 = 0x22;
-		public const byte NR44 = 0x23;
-		public const byte NR50 = 0x24;
-		public const byte NR51 = 0x25;
-		public const byte NR52 = 0x26;
-		public const byte LCDC = 0x40;
-		public const byte STAT = 0x41;
-		public const byte SCY = 0x42;
-		public const byte SCX = 0x43;
-		public const byte LY = 0x44;
-		public const byte LYC = 0x45;
-		public const byte DMA = 0x46;
-		public const byte BGP = 0x47;
-		public const byte OBP0 = 0x48;
-		public const byte OBP1 = 0x49;
-		public const byte WY = 0x4A;
-		public const byte WX = 0x4B;
-		public const byte KEY1 = 0x4D;
-		public const byte VBK = 0x4F;
-		public const byte HDMA1 = 0x51;
-		public const byte HDMA2 = 0x52;
-		public const byte HDMA3 = 0x53;
-		public const byte HDMA4 = 0x54;
-		public const byte HDMA5 = 0x55;
-		public const byte RP = 0x56;
-		public const byte BCPS = 0x68;
-		public const byte BCPD = 0x69;
-		public const byte OCPS = 0x6A;
-		public const byte OCPD = 0x6B;
-		public const byte SVBK = 0x70;
-		#endregion
-
 		public const int MODE_0_CYCLES = 204;
 		public const int MODE_1_CYCLES = 1140;
 		public const int MODE_2_CYCLES = 80;
@@ -147,56 +90,56 @@ namespace GBEmu.Emulator
 				{
 					switch (position & 0xFF)
 					{
-						case P1:
+						case IOPorts.P1:
 							return input.Read(position);
-						case SB:
-						case SC:
+						case IOPorts.SB:
+						case IOPorts.SC:
 							return serial.Read(position);
-						case DIV:
-						case TIMA:
-						case TMA:
-						case TAC:
+						case IOPorts.DIV:
+						case IOPorts.TIMA:
+						case IOPorts.TMA:
+						case IOPorts.TAC:
 							return timer.Read(position);
-						case IF:
+						case IOPorts.IF:
 							return InterruptFlag;
-						case NR10:
-						case NR11:
-						case NR12:
-						case NR13:
-						case NR14:
-						case NR21:
-						case NR22:
-						case NR23:
-						case NR24:
-						case NR30:
-						case NR31:
-						case NR32:
-						case NR33:
-						case NR34:
-						case NR41:
-						case NR42:
-						case NR43:
-						case NR44:
-						case NR50:
-						case NR51:
-						case NR52:
+						case IOPorts.NR10:
+						case IOPorts.NR11:
+						case IOPorts.NR12:
+						case IOPorts.NR13:
+						case IOPorts.NR14:
+						case IOPorts.NR21:
+						case IOPorts.NR22:
+						case IOPorts.NR23:
+						case IOPorts.NR24:
+						case IOPorts.NR30:
+						case IOPorts.NR31:
+						case IOPorts.NR32:
+						case IOPorts.NR33:
+						case IOPorts.NR34:
+						case IOPorts.NR41:
+						case IOPorts.NR42:
+						case IOPorts.NR43:
+						case IOPorts.NR44:
+						case IOPorts.NR50:
+						case IOPorts.NR51:
+						case IOPorts.NR52:
 							return audio.Read(position);
-						case LCDC:
-						case STAT:
-						case SCX:
-						case SCY:
-						case LY:
-						case LYC:
-						case BGP:
-						case OBP0:
-						case OBP1:
-						case WX:
-						case WY:
-						case VBK:
-						case BCPD:
-						case BCPS:
-						case OCPS:
-						case OCPD:
+						case IOPorts.LCDC:
+						case IOPorts.STAT:
+						case IOPorts.SCX:
+						case IOPorts.SCY:
+						case IOPorts.LY:
+						case IOPorts.LYC:
+						case IOPorts.BGP:
+						case IOPorts.OBP0:
+						case IOPorts.OBP1:
+						case IOPorts.WX:
+						case IOPorts.WY:
+						case IOPorts.VBK:
+						case IOPorts.BCPD:
+						case IOPorts.BCPS:
+						case IOPorts.OCPS:
+						case IOPorts.OCPD:
 							return LCD.Read(position);
 						default:
 							return 0;
@@ -238,61 +181,61 @@ namespace GBEmu.Emulator
 			{
 				switch (position & 0xFF)
 				{
-					case P1:
+					case IOPorts.P1:
 						input.Write(position, value);
 						break;
-					case SB:
-					case SC:
+					case IOPorts.SB:
+					case IOPorts.SC:
 						serial.Write(position, value);
 						break;
-					case DIV:
-					case TIMA:
-					case TMA:
-					case TAC:
+					case IOPorts.DIV:
+					case IOPorts.TIMA:
+					case IOPorts.TMA:
+					case IOPorts.TAC:
 						timer.Write(position, value);
 						break;
-					case IF:
+					case IOPorts.IF:
 						InterruptFlag = value;
 						break;
-					case NR10:
-					case NR11:
-					case NR12:
-					case NR13:
-					case NR14:
-					case NR21:
-					case NR22:
-					case NR23:
-					case NR24:
-					case NR30:
-					case NR31:
-					case NR32:
-					case NR33:
-					case NR34:
-					case NR41:
-					case NR42:
-					case NR43:
-					case NR44:
-					case NR50:
-					case NR51:
-					case NR52:
+					case IOPorts.NR10:
+					case IOPorts.NR11:
+					case IOPorts.NR12:
+					case IOPorts.NR13:
+					case IOPorts.NR14:
+					case IOPorts.NR21:
+					case IOPorts.NR22:
+					case IOPorts.NR23:
+					case IOPorts.NR24:
+					case IOPorts.NR30:
+					case IOPorts.NR31:
+					case IOPorts.NR32:
+					case IOPorts.NR33:
+					case IOPorts.NR34:
+					case IOPorts.NR41:
+					case IOPorts.NR42:
+					case IOPorts.NR43:
+					case IOPorts.NR44:
+					case IOPorts.NR50:
+					case IOPorts.NR51:
+					case IOPorts.NR52:
 						audio.Write(position, value);
 						break;
-					case LCDC:
-					case STAT:
-					case SCX:
-					case SCY:
-					case LY:
-					case LYC:
-					case BGP:
-					case OBP0:
-					case OBP1:
-					case WX:
-					case WY:
-					case VBK:
-					case BCPD:
-					case BCPS:
-					case OCPS:
-					case OCPD:
+					case IOPorts.LCDC:
+					case IOPorts.STAT:
+					case IOPorts.SCX:
+					case IOPorts.SCY:
+					case IOPorts.LY:
+					case IOPorts.LYC:
+					case IOPorts.BGP:
+					case IOPorts.OBP0:
+					case IOPorts.OBP1:
+					case IOPorts.WX:
+					case IOPorts.WY:
+					case IOPorts.VBK:
+					case IOPorts.BCPD:
+					case IOPorts.BCPS:
+					case IOPorts.OCPS:
+					case IOPorts.OCPD:
 						LCD.Write(position, value);
 						if (LCD.DMATransferRequest)
 						{

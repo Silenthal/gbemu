@@ -55,13 +55,13 @@ namespace GBEmu.Emulator
         {
             switch (position & 0xFF)
             {
-                case MMU.DIV:
+                case IOPorts.DIV:
                     return Divider;
-                case MMU.TIMA:
+				case IOPorts.TIMA:
                     return Timer;
-                case MMU.TMA:
+				case IOPorts.TMA:
                     return TimerOverflowValue;
-                case MMU.TAC:
+				case IOPorts.TAC:
                     return TimerControl;
                 default:
                     return 0;
@@ -94,16 +94,16 @@ namespace GBEmu.Emulator
         {
             switch (position & 0xFF)
             {
-                case MMU.DIV:
+                case IOPorts.DIV:
                     Divider = 0;
                     break;
-                case MMU.TIMA:
+				case IOPorts.TIMA:
                     Timer = data;
                     break;
-                case MMU.TMA:
+				case IOPorts.TMA:
                     TimerOverflowValue = data;
                     break;
-                case MMU.TAC:
+				case IOPorts.TAC:
                     TimerControl = (byte)(data & 0x7);
                     if ((TimerControl & 0x4) == 0)
                     {

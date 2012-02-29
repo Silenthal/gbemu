@@ -119,7 +119,9 @@
     <Compile Include="Emulator\CPU.cs" />
     <Compile Include="Emulator\GBSystem.cs" />
     <Compile Include="Emulator\GBTimer.cs" />
+    <Compile Include="Emulator\IOConstants.cs" />
     <Compile Include="Emulator\Input.cs" />
+    <Compile Include="Emulator\Interrupt.cs" />
     <Compile Include="Emulator\IODevice.cs" />
     <Compile Include="Emulator\Serial.cs" />
     <Compile Include="Emulator\SysEventManager.cs" />

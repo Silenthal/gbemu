@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace GBEmu.Emulator
 {
@@ -852,36 +853,30 @@ namespace GBEmu.Emulator
 				return;
 			}
 			//The starting pixel in the 'BG Map'
-			byte pixelY = (byte)(ScrollY + LY);
-			byte pixelX = ScrollX;
-			int lineNum = pixelY & 0x7;
+			byte bgPixelY = (byte)(ScrollY + LY);
+			byte bgPixelX = ScrollX;
+			//If the window is to be drawn, then it must be enabled, and its 
+			bool IsScanlineInWindowRange = (WindowY <= bgPixelY && IsWindowEnabled);
+			int lineNum = bgPixelY & 0x7;
 			int lastXTileRead = 1;
 			int[] currentTileLine = new int[8];
 			for (int i = 0; i < 160; i++)
 			{
 				//First check is to avoid reading the tilemap for the same tile read.
-				if (lastXTileRead != (pixelX & 0xF8))
+				if (lastXTileRead != (bgPixelX & 0xF8))
 				{
-					int tileIndex = VRAM[0, BGTileMapDisplayStart + ((pixelY >> 3) * 0x20) + (pixelX >> 3)];
-					lastXTileRead = pixelX & 0xF8;
-					int position = 0;
-					if (isComplementTileIndexingUsed)
-					{
-						if (tileIndex > 0x7F) tileIndex -= 0x100;
-						position = 0x9000 + (tileIndex * 0x10);
-					}
-					else
-					{
-						position = 0x8000 + (tileIndex * 0x10);
-					}
+					byte tileIndex = VRAM[0, BGTileMapDisplayStart + ((bgPixelY >> 3) * 0x20) + (bgPixelX >> 3)];
+					if (isComplementTileIndexingUsed) tileIndex += 0x80;
+					lastXTileRead = bgPixelX & 0xF8;
+					int position = BGWinTileDataStart + (tileIndex * 0x10);
 					FetchTileLineFromTile(position, lineNum, currentTileLine);
 				}
 				//Line is positioned at the appropriate Y index, now to index into it for X.
 				//pixelX & 0x8 == the pixel number inside the specific tile line.
 				//currentTileLine[pixelNum] == A number from 0 to 3, indicating the color to be used.
 				//pixelY * LCDStride + pixelX == The start of the 3-byte RGB pixel in the LCDMap.
-				Array.Copy(GBColor.Colors[currentTileLine[pixelX & 0x8]], 0, LCDMap, pixelY * LCDStride + pixelX, RGB24PixelCount);
-				pixelX++;
+				Array.Copy(GBColor.Colors[currentTileLine[bgPixelX & 0x8]], 0, LCDMap, bgPixelY * LCDStride + bgPixelX, RGB24PixelCount);
+				bgPixelX++;
 			}
 		}
 

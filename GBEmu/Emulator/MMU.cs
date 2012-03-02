@@ -16,6 +16,7 @@ namespace GBEmu.Emulator
 		public Video LCD;
 		public Serial serial = new Serial();
 		public Audio audio = new Audio();
+		public InterruptManager interruptManager = new InterruptManager();
 
 		public bool isCGB = false;
 		public bool isDoubleSpeed = false;
@@ -31,33 +32,15 @@ namespace GBEmu.Emulator
 		private byte[,] internalWRAM1;
 		private int internalWRAMBankNum = 0;
 
-		private byte[] _OAM = new byte[0xA0];
-
 		private byte[] hardwareRegisters = new byte[0x80];
 
 		private byte InterruptEnable;
 		private byte InterruptFlag;
 		private byte[] HRAM = new byte[0x7F];
 
-		public const int MODE_0_CYCLES = 204;
-		public const int MODE_1_CYCLES = 1140;
-		public const int MODE_2_CYCLES = 80;
-		public const int MODE_3_CYCLES = 172;
-		public const int LY_CYCLE = 456;
-		public const int VBLANK_CYCLES = 4560;
-		public const int SCREEN_DRAW_CYCLES = 70224;
-		public const int LY_ONSCREEN_CYCLES = 65664;
 		public const int CYCLES_PER_SECOND = 4194304;
 		public const int DIV_CYCLE = 256;
 		public const int DMA_CYCLE = 670;
-
-		public byte FlagStatus
-		{
-			get
-			{
-				return (byte)(InterruptEnable & InterruptFlag);
-			}
-		}
 
 		public MMU(byte[] inFile)
 		{
@@ -266,8 +249,9 @@ namespace GBEmu.Emulator
 			int startAddress = transferDetails << 8;
 			for (int i = 0; i < 0xA0; i++)
 			{
-				LCD.OAM[i + 0xFE00] = Read(startAddress + 1);
+				LCD.OAM[i] = Read(startAddress + 1);
 			}
+			LCD.ReconstructOAMTable();
 		}
 
 		public override void UpdateCounter(int cycles)

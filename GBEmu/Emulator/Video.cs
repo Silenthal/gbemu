@@ -71,8 +71,8 @@ namespace GBEmu.Emulator
 		private const int TileStride = TileWidth * RGB24PixelCount;
 		private const int TileArraySize = TileStride * TileHeight;
 		
-		private const int BGMapTileXCount = BGMapWidth / TileWidth;
-		private const int BGMapTileYCount = BGMapHeight / TileHeight;
+		private const int TileMapXCount = BGMapWidth / TileWidth;
+		private const int TileMapYCount = BGMapHeight / TileHeight;
 		#endregion
 
 		private const byte LYLimit = 154;
@@ -350,10 +350,26 @@ namespace GBEmu.Emulator
 		};
 		#endregion
 
+		#region Sprite Read Constants
+		private const byte SpritePalette = 0x07;	//_____NNN : Selects from OBP 0-7 (CGB)
+		private const byte SpriteVRamBank = 0x08;	//____N___ : Selects from VRAM Bank 0 or 1 (CGB)
+		private const byte SpritePaletteNum = 0x10;	//___N____ : Selects from OBP0 or OBP1
+		private const byte SpriteXFlip = 0x20;		//__N_____ : 1 = Horizontal Flip
+		private const byte SpriteYFlip = 0x40;		//_N______ : 1 = Vertical Flip
+		private const byte SpritePriority = 0x80;	//N_______ : 1 = (hides behind BG color 1 - 3)
+		#endregion
+
 		private int VramBank = 0;
 
 		private byte LCDControl;//FF40
 		#region LCD Control Options
+		private bool LCDEnabled
+		{
+			get
+			{
+				return (LCDControl & LCDC_DISPLAY) != 0;
+			}
+		}//Bit 7
 		private int WindowTileMapStart
 		{
 			get
@@ -361,20 +377,6 @@ namespace GBEmu.Emulator
 				return (LCDControl & LCDC_WIN_TILE_MAP) == 0 ? 0x1800 : 0x1C00;
 			}
 		}//Bit 6
-		private int BGTileMapDisplayStart
-		{
-			get
-			{
-				return (LCDControl & LCDC_BG_TILE_MAP) == 0 ? 0x1800 : 0x1C00;
-			}
-		}//Bit 3
-		private bool isLCDEnabled
-		{
-			get
-			{
-				return (LCDControl & LCDC_DISPLAY) != 0;
-			}
-		}//Bit 7
 		private bool IsWindowEnabled
 		{
 			get
@@ -389,6 +391,13 @@ namespace GBEmu.Emulator
 				return isComplementTileIndexingUsed ? 0x800 : 0;
 			}
 		}//Bit 4
+		private int BGTileMapStart
+		{
+			get
+			{
+				return (LCDControl & LCDC_BG_TILE_MAP) == 0 ? 0x1800 : 0x1C00;
+			}
+		}//Bit 3
 		private int SpriteHeight
 		{
 			get
@@ -397,14 +406,14 @@ namespace GBEmu.Emulator
 			}
 
 		}//Bit 2
-		private bool areSpritesDisplayed
+		private bool SpritesEnabled
 		{
 			get
 			{
 				return (LCDControl & LCD_SPRITE_DISPLAY) != 0;
 			}
 		}//Bit 1
-		private bool isBackgroundEnabled
+		private bool DMGBackgroundEnabled
 		{
 			get
 			{
@@ -424,7 +433,7 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (byte)(stat | LYCoincidence | LCDMode);
+				return (byte)(stat | LYCoincidence | (byte)LCDMode);
 			}
 			set
 			{
@@ -468,19 +477,19 @@ namespace GBEmu.Emulator
 			}
 		}
 		#endregion
-		private byte LCDMode;
+		private LCDMode LCDMode;
 		private bool oamAccessAllowed
 		{
 			get
 			{
-				return (LCDMode & 0x2) == 0;
+				return (LCDMode & Emulator.LCDMode.Mode2) == 0;
 			}
 		}
 		private bool vramAccessAllowed
 		{
 			get
 			{
-				return LCDMode != Mode3;
+				return LCDMode != LCDMode.Mode3;
 			}
 		}
 
@@ -506,23 +515,10 @@ namespace GBEmu.Emulator
 		private const byte STAT_MODE0_HBLANK_INTERRUPT = 0x08;
 		private const byte STAT_COINCIDENCE_UNEQUAL = 0x04;
 		#endregion
-
-
-		#region LCD Mode Constants
-		private const byte STAT_LCD_MODE_CLEAR = 0xFC;
-		private const byte STAT_LCD_MODE_0 = 0x0;
-		private const byte STAT_LCD_MODE_1 = 0x1;
-		private const byte STAT_LCD_MODE_2 = 0x2;
-		private const byte STAT_LCD_MODE_3 = 0x3;
-		#endregion
 		#endregion
 
 		#region Cycle Constants
 		private int LineCounter;
-		private const int Mode0 = 0;
-		private const int Mode1 = 1;
-		private const int Mode2 = 2;
-		private const int Mode3 = 3;
 		private const int Mode1Cycles = 4560;
 		private const int Mode2Cycles = 80;
 		private const int Mode3Cycles = 172;
@@ -542,7 +538,7 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return BGTileMapDisplayStart == 0x1800 ? 0 : 1;
+				return BGTileMapStart == 0x1800 ? 0 : 1;
 			}
 		}
 
@@ -580,8 +576,11 @@ namespace GBEmu.Emulator
 
 		public bool DMATransferRequest = false;
 
+		private SpriteRef[] SpriteTable;
+
 		public Video()
 		{
+			SpriteTable = new SpriteRef[40];
 			VramBank = 0;
 			LCDStatus = 0;
 			LCDControl = 0;
@@ -595,7 +594,7 @@ namespace GBEmu.Emulator
 
 			OAM = new byte[0xA0];
 
-			LCDMode = Mode2;
+			LCDMode = LCDMode.Mode2;
 
 			BGPalette_DMG = new byte[4][];
 			for (int i = 0; i < 4; i++)
@@ -779,7 +778,7 @@ namespace GBEmu.Emulator
 					CycleCounter = 0;
 					LineCounter = 0;
 					LY = 0;
-					LCDMode = Mode2;
+					LCDMode = LCDMode.Mode2;
 				}
 			}
 		}
@@ -818,138 +817,189 @@ namespace GBEmu.Emulator
 			return pix0 + pix1;
 		}
 
-		/// <summary>
-		/// Used for drawing a scanline in GB mode.
-		/// Each call to this function will increment LY by 1, looping at 154.
-		/// </summary>
-		private void DrawDMGTileline()
+		private int DrawDMGScanline()
 		{
-			#region Drawing on screen when LCD is off
-			if (!LCDScreenOn)
+			int SpritesDrawn = 0;
+			if (LCDEnabled && LY < LCDHeight)
 			{
-				if (LY == 70)
+				if (DMGBackgroundEnabled)
 				{
-					for (int i = 0; i < LCDWidth; i++)
-					{
-						LCDMap[i + 0] = 0;
-						LCDMap[i + 1] = 0;
-						LCDMap[i + 2] = 0;
-					}
+					DrawDMGTiles();
 				}
+				if (SpritesEnabled)
+				{
+					SpritesDrawn = DrawDMGSprites();
+				}
+				LY++;
+			}
+			return SpritesDrawn;
+		}
+
+		private void DrawDMGTiles()
+		{
+			bool isScanlineIntersectingWindow = (IsWindowEnabled && WindowY <= LY);
+			int[] lastTileLine = new int[8];
+			byte BGY = (byte)(ScrollY + LY);
+			byte BGX = 0;
+			byte WinY = (byte)(LY - WindowY);
+			byte WinX = 0;
+			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
+			{
+				//For drawing from window
+				if (isScanlineIntersectingWindow && LCD_X >= (WindowX - 7))
+				{
+					WinX = (byte)(LCD_X - (WindowX - 7));
+					byte TileIndexWin = VRAM[0, WindowTileMapStart + ((WinY >> 3) * TileMapXCount) + (WinX >> 3)];
+					if (isComplementTileIndexingUsed) TileIndexWin += 0x80;
+					int TilePosWin = BGWinTileDataStart + (TileIndexWin * 0x10);
+					int TileOffYWin = WinY & 0x7;
+					int TileOffXWin = WinX & 0x7;
+					FetchTileLineFromTile(TilePosWin, TileOffYWin, lastTileLine, false, false);
+					LCDMap[LY * LCDStride + LCD_X + 0] = GBColor.Colors[lastTileLine[TileOffXWin]][0];
+					LCDMap[LY * LCDStride + LCD_X + 1] = GBColor.Colors[lastTileLine[TileOffXWin]][1];
+					LCDMap[LY * LCDStride + LCD_X + 2] = GBColor.Colors[lastTileLine[TileOffXWin]][2];
+				}
+				//For drawing from map
 				else
 				{
-					for (int i = 0; i < LCDWidth; i++)
-					{
-						LCDMap[i + 0] = 255;
-						LCDMap[i + 1] = 255;
-						LCDMap[i + 2] = 255;
-					}
+					BGX = (byte)(ScrollX + LCD_X);
+					byte TileIndexBG = VRAM[0, BGTileMapStart + ((BGY >> 3) * TileMapXCount) + (BGX >> 3)];
+					if (isComplementTileIndexingUsed) TileIndexBG += 0x80;
+					int TilePosBG = BGWinTileDataStart + (TileIndexBG * 0x10);
+					int TileOffYBG = BGY & 0x7;
+					int TileOffXBG = BGX & 0x7;
+					FetchTileLineFromTile(TilePosBG, TileOffYBG, lastTileLine, false, false);
+					LCDMap[LY * LCDStride + LCD_X + 0] = GBColor.Colors[lastTileLine[TileOffXBG]][0];
+					LCDMap[LY * LCDStride + LCD_X + 1] = GBColor.Colors[lastTileLine[TileOffXBG]][1];
+					LCDMap[LY * LCDStride + LCD_X + 2] = GBColor.Colors[lastTileLine[TileOffXBG]][2];
 				}
-				return;
-			}
-			#endregion
-			if (LY >= LCDHeight)
-			{
-				return;
-			}
-			//The starting pixel in the 'BG Map'
-			byte bgPixelY = (byte)(ScrollY + LY);
-			byte bgPixelX = ScrollX;
-			//If the window is to be drawn, then it must be enabled, and its 
-			bool IsScanlineInWindowRange = (WindowY <= bgPixelY && IsWindowEnabled);
-			int lineNum = bgPixelY & 0x7;
-			int lastXTileRead = 1;
-			int[] currentTileLine = new int[8];
-			for (int i = 0; i < 160; i++)
-			{
-				//First check is to avoid reading the tilemap for the same tile read.
-				if (lastXTileRead != (bgPixelX & 0xF8))
-				{
-					byte tileIndex = VRAM[0, BGTileMapDisplayStart + ((bgPixelY >> 3) * 0x20) + (bgPixelX >> 3)];
-					if (isComplementTileIndexingUsed) tileIndex += 0x80;
-					lastXTileRead = bgPixelX & 0xF8;
-					int position = BGWinTileDataStart + (tileIndex * 0x10);
-					FetchTileLineFromTile(position, lineNum, currentTileLine);
-				}
-				//Line is positioned at the appropriate Y index, now to index into it for X.
-				//pixelX & 0x8 == the pixel number inside the specific tile line.
-				//currentTileLine[pixelNum] == A number from 0 to 3, indicating the color to be used.
-				//pixelY * LCDStride + pixelX == The start of the 3-byte RGB pixel in the LCDMap.
-				Array.Copy(GBColor.Colors[currentTileLine[bgPixelX & 0x8]], 0, LCDMap, bgPixelY * LCDStride + bgPixelX, RGB24PixelCount);
-				bgPixelX++;
 			}
 		}
 
-		private void FetchTileLineFromTile(int position, int lineNum, int[] outArr)
+		private void FetchTileLineFromTile(int position, int lineNum, int[] outArr, bool XFlip, bool YFlip)
 		{
-#if DEBUG
-			Debug.Assert(outArr != null && outArr.Length == 8);
-#endif
-			int pos = position + (lineNum * 2);
+			int pos = position + (YFlip ? ((7 - lineNum) * 2) : (lineNum * 2));
 			for (int i = 0; i < 8; i++)
 			{
-				int plane0 = VRAM[0, pos + 0] >> (7 - i);
-				int plane1 = VRAM[0, pos + 1] >> (7 - i);
+				int plane0 = VRAM[0, pos + 0] >> (XFlip ? i : (7 - i));
+				int plane1 = VRAM[0, pos + 1] >> (XFlip ? i : (7 - i));
 				outArr[i] = plane0 + (plane1 * 2);
 			}
 		}
 
-		private void DrawDMGSpriteline()
+		struct SpriteRef
 		{
-			//Drawing a spriteline...
-			//Palettes for the sprites wil use the _________
-			//Each entry in the OBJ palette stands for a color, in RGB24 format.
-			//Drawing will occur from VRAM. In the case of DMG mode, tiles reside in one bank.
-			//Drawing method:
-			//-Find out which palettes lie on the line. In DMG mode, sprites that lie on the same
-			//-scanline get blah blah...
-			//-Gonna do that part after.
-
-			//-Find the start of the line. This depends on the ScrollX and ScrollY registers.
-			//-Then, for each 'pixel' on the line (160), do:
-			//--The tile it refers to
-			//--The specific lines in the tile
-			//--The specific sections of the two bytes composing the line, in the time
-			//--Conversion info for those bytes (could do a method call here)
-			//--Copying the color info for the pixel into the line.
-			if (LY >= LCDHeight)
+			public int OAMIndex;
+			/// <summary>
+			/// Represents the X offset of the sprite.
+			/// </summary>
+			public int XOffset;
+			/// <summary>
+			/// Represents the Y offset of the sprite.
+			/// </summary>
+			public int YOffset;
+			public int TileIndex;
+			public int SpriteProperties;
+			public static bool operator <(SpriteRef left, SpriteRef right)
 			{
-				return;
+				return left.XOffset != right.XOffset ? left.XOffset < right.XOffset : left.OAMIndex < right.OAMIndex;
 			}
-			//First, the Y-position of the pixel in the BG Map.
-			byte pixelY = (byte)(ScrollY + LY);
-			//Then, for each pixel on the line...
-			for (int i = 0; i < 160; i++)
+			public static bool operator >(SpriteRef left, SpriteRef right)
 			{
-				//Then the X position of the pixel in the BG Map.
-				byte pixelX = (byte)(ScrollX + i);
-
-				//Then, the address of the tile the pixel lies in.
-				//The tile map is 32 x 32 tiles, so each row is 32 tiles long.
-				int vramBGMAddr = ((pixelY >> 3) * BGMapTileXCount) + (pixelX >> 3) + 0x1800;
-				int tileIndex = VRAM[0, vramBGMAddr];
-
-				//Tile index will be different depending on the indexing method.
-				if (BGWinTileDataStart != 0) tileIndex = ((tileIndex + 0x80) & 0xFF);
-				tileIndex *= 10; //This adjusts it so it points to the start of a specific tile.
-
-				//Then get the number of the color in the palette.
-				int palNum = TileLinesToDMGColorIndex(tileIndex, pixelY & 3, pixelX & 3);
-				//And the pixel's position in the LCD map, which is actually what's going to be shown.
-				int pixelPosInLCD = (pixelY * LCDStride) + (pixelX * RGB24PixelCount);
-
-				//Then, draw each color.
-				LCDMap[pixelPosInLCD + 0] = BGPalette_DMG[palNum][0];
-				LCDMap[pixelPosInLCD + 1] = BGPalette_DMG[palNum][1];
-				LCDMap[pixelPosInLCD + 2] = BGPalette_DMG[palNum][2];
+				return left.XOffset != right.XOffset ? left.XOffset > right.XOffset : left.OAMIndex > right.OAMIndex;
 			}
 		}
 
-		private Dictionary<byte, byte> GetSpritesOnLine()
+		public void ReconstructOAMTable()
 		{
-			//Return a list of sprite indexes
-			Dictionary<byte, byte> returned = new Dictionary<byte, byte>();
-			return returned;
+			for (int i = 0; i < 40; i++)
+			{
+				SpriteTable[i] = new SpriteRef()
+				{
+					OAMIndex = i * 4,
+					YOffset = OAM[i * 4],
+					XOffset = OAM[(i * 4) + 1], 
+					TileIndex = OAM[(i * 4) + 2],
+					SpriteProperties = OAM[(i * 4) + 3]
+				};
+				//If in CGB mode:
+				//-Sprites are drawn by their OAM index, then their X position. Lower OAM takes priority.
+				//If in DMG mode:
+				//-Sprites are sorted by their X position. In the case that their Xs are equal,
+				//-the one with the lower OAM position takes priority.
+				if (!IsCGB)
+				{
+					int x = i;
+					while (x > 0 && IsCGB ? (SpriteTable[x].OAMIndex < SpriteTable[x - 1].OAMIndex) : (SpriteTable[x] < SpriteTable[x - 1]))
+					{
+						SpriteRef temp = SpriteTable[x - 1];
+						SpriteTable[x - 1] = SpriteTable[x];
+						SpriteTable[x] = temp;
+						x--;
+					}
+				}
+			}
+		}
+
+		private int DrawDMGSprites()
+		{
+			//Sprites always take their tiles from 8000-8FFF.
+			if (SpritesEnabled)
+			{
+				int LCD_X = 0;
+				int LineSpriteCount = 0;
+				int[] lastTileLine = new int[8];
+				//Run through each sprite in the table.
+				for (int i = 0; i < SpriteTable.Length; i++)
+				{
+					SpriteRef r = SpriteTable[i];
+					//If the sprite is on the line...
+					if (LY >= r.YOffset - 16 && LY < r.YOffset)
+					{
+						//Increment the sprite count.
+						LineSpriteCount++;
+						//And if it's drawable to the screen (since it's on the LY, check if X pos is within screen)...
+						if (r.XOffset > LCD_X && r.XOffset > 0 && r.XOffset < LCDWidth - 8)
+						{
+							int pixelLine = r.YOffset - LY;
+							int tilePosition = r.TileIndex * 0x10;
+							bool XFlip = (r.SpriteProperties & SpriteXFlip) != 0;
+							bool YFlip = (r.SpriteProperties & SpriteYFlip) != 0;
+							//If the tile is actually to be drawn...
+							if (pixelLine < 8 || SpriteHeight == 16)
+							{
+								if (r.XOffset - 8 >= LCD_X) LCD_X = r.XOffset - 8;
+								if (SpriteHeight == 16)
+								{
+									pixelLine -= 8;
+									tilePosition++;
+								}
+								FetchTileLineFromTile(tilePosition, pixelLine, lastTileLine, XFlip, YFlip);
+								for (int j = r.XOffset - LCD_X; j < r.XOffset; j++)
+								{
+									//Priority 0 : Sprites draw over BG, except in the case of color 0.
+									//Priority 1 : Sprites aren't drawn over BG, except when color is white (?)
+									if (((r.SpriteProperties & SpritePriority) == 0) ? lastTileLine[j] != 0 : IsPixelWhite(LY, LCD_X))
+									{
+										LCDMap[LY * LCDStride + LCD_X + 0] = GBColor.Colors[lastTileLine[j]][0];
+										LCDMap[LY * LCDStride + LCD_X + 1] = GBColor.Colors[lastTileLine[j]][1];
+										LCDMap[LY * LCDStride + LCD_X + 2] = GBColor.Colors[lastTileLine[j]][2];
+									}
+								}
+							}
+						}
+					}
+				}
+				return LineSpriteCount;
+			}
+			else return 0;
+		}
+
+		private bool IsPixelWhite(int ly, int lx)
+		{
+			return LCDMap[ly * LCDStride + lx + 0] == 0x00
+				&& LCDMap[ly * LCDStride + lx + 1] == 0x00
+				&& LCDMap[ly * LCDStride + lx + 2] == 0x00;
 		}
 
 		public override void UpdateCounter(int cycles)
@@ -968,42 +1018,42 @@ namespace GBEmu.Emulator
 				//LY increases happen after 0, or after each line of 1.
 				switch (LCDMode)
 				{
-					case Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
+					case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
 						if (LineCounter >= Mode2Cycles)
 						{
 							LineCounter -= Mode2Cycles;
 							//When switching to 3, write the current scanline.
-							LCDMode = Mode3;
-							DrawDMGTileline();
+							LCDMode = LCDMode.Mode3;
+							DrawDMGScanline();
 						}
 						break;
-					case Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
+					case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
 						if (LineCounter >= Mode3Cycles)
 						{
 							//When switching to mode 0, the line is already drawn, so do nothing.
-							LCDMode = Mode0;
+							LCDMode = LCDMode.Mode0;
 							LineCounter -= Mode3Cycles;
 							LCDCInterruptRequest = Mode0_HBlankInterruptEnabled || (LYCCoincidenceInterruptEnabled && (LYCoincidence != 0));
 						}
 						break;
-					case Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
+					case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
 						if (LineCounter >= Mode0Cycles)
 						{
 							LineCounter -= Mode0Cycles;
 							IncrementLY();
 							if (LY >= LCDHeight)
 							{
-								LCDMode = Mode1;
+								LCDMode = LCDMode.Mode1;
 								LCDCInterruptRequest = Mode1_VBlankInterruptEnabled;
 								VBlankInterruptRequest = true;
 							}
 							else
 							{
-								LCDMode = Mode2;
+								LCDMode = LCDMode.Mode2;
 							}
 						}
 						break;
-					case Mode1://Mode 1: VBlank...access allowed, progresses to 2
+					case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
 						if (LineCounter >= LineDrawCycles)
 						{
 							LineCounter -= LineDrawCycles;
@@ -1011,10 +1061,10 @@ namespace GBEmu.Emulator
 							if (LY == 0)
 							{
 								CycleCounter -= LCDDrawCycles;
-								LCDMode = Mode2;
+								LCDMode = LCDMode.Mode2;
 							}
 						}
-						DrawDMGTileline();
+						DrawDMGScanline();
 						break;
 				}
 				#endregion
@@ -1024,7 +1074,7 @@ namespace GBEmu.Emulator
 				LY = 0;
 				for (int i = 0; i < LCDHeight; i++)
 				{
-					DrawDMGTileline();
+					DrawDMGTiles();
 					LY++;
 				}
 			}

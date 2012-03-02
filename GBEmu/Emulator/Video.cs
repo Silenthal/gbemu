@@ -50,6 +50,7 @@ namespace GBEmu.Emulator
 
 	class Video : TimedIODevice
 	{
+		private InterruptManager interruptManager;
 		public int ExecutedFrameCycles { get { return CycleCounter; } }
 		public bool IsCGB { get; set; }
 		#region Screen constants
@@ -534,42 +535,6 @@ namespace GBEmu.Emulator
 		
 		public byte[] OAM;
 
-		private int BGSelectedMap
-		{
-			get
-			{
-				return BGTileMapStart == 0x1800 ? 0 : 1;
-			}
-		}
-
-		private bool VBlankInterruptRequest = false;
-		public byte VBlankInterrupt 
-		{ 
-			get
-			{
-				if (VBlankInterruptRequest)
-				{
-					VBlankInterruptRequest = false;
-					return 0x1;
-				}
-				else return 0;
-			}
-		}
-
-		private bool LCDCInterruptRequest = false;
-		public byte LCDCInterrupt 
-		{
-			get
-			{
-				if (LCDCInterruptRequest)
-				{
-					LCDCInterruptRequest = false;
-					return 0x2;
-				}
-				else return 0;
-			}
-		}
-
 		private bool LCDScreenOn;
 
 		private int DMACounter;
@@ -578,8 +543,9 @@ namespace GBEmu.Emulator
 
 		private SpriteRef[] SpriteTable;
 
-		public Video()
+		public Video(InterruptManager iM)
 		{
+			interruptManager = iM;
 			SpriteTable = new SpriteRef[40];
 			VramBank = 0;
 			LCDStatus = 0;
@@ -1033,7 +999,10 @@ namespace GBEmu.Emulator
 							//When switching to mode 0, the line is already drawn, so do nothing.
 							LCDMode = LCDMode.Mode0;
 							LineCounter -= Mode3Cycles;
-							LCDCInterruptRequest = Mode0_HBlankInterruptEnabled || (LYCCoincidenceInterruptEnabled && (LYCoincidence != 0));
+							if (Mode0_HBlankInterruptEnabled || (LYCCoincidenceInterruptEnabled && (LYCoincidence != 0)))
+							{
+								interruptManager.RequestInterrupt(InterruptType.LCDC);
+							}
 						}
 						break;
 					case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
@@ -1044,8 +1013,8 @@ namespace GBEmu.Emulator
 							if (LY >= LCDHeight)
 							{
 								LCDMode = LCDMode.Mode1;
-								LCDCInterruptRequest = Mode1_VBlankInterruptEnabled;
-								VBlankInterruptRequest = true;
+								if (Mode1_VBlankInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
+								interruptManager.RequestInterrupt(InterruptType.VBlank);
 							}
 							else
 							{
@@ -1084,7 +1053,7 @@ namespace GBEmu.Emulator
 		{
 			LY++;
 			if (LY >= LYLimit) LY = 0;
-			if (LY == LYCompare && LYCCoincidenceInterruptEnabled) LCDCInterruptRequest = true;
+			if (LY == LYCompare && LYCCoincidenceInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
 		}
 	}
 }

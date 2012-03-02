@@ -61,5 +61,6 @@ namespace GBEmu.Emulator
 		public const byte OCPS = 0x6A;
 		public const byte OCPD = 0x6B;
 		public const byte SVBK = 0x70;
+		public const byte IE = 0xFF;
 	}
 }

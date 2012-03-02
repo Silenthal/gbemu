@@ -586,7 +586,7 @@ namespace GBEmu.Emulator
 								else if (mmu.interruptManager.InterruptsReady)
 								{
 									//Handle GBC mode
-									if (mmu.isCGB) CycleCounter += 4;
+									if (mmu.IsCGB) CycleCounter += 4;
 									else RepeatLastInstruction = true;
 								}
 								break;

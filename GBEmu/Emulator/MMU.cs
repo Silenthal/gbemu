@@ -10,20 +10,21 @@ namespace GBEmu.Emulator
 {
 	class MMU : TimedIODevice
 	{
+		#region System Components
 		public Input input;
-		public GBTimer timer = new GBTimer();
+		public GBTimer timer;
 		public Cart cart;
 		public Video LCD;
-		public Serial serial = new Serial();
-		public Audio audio = new Audio();
-		public InterruptManager interruptManager = new InterruptManager();
+		public Serial serial;
+		public Audio audio;
+		public InterruptManager interruptManager;
+		#endregion
 
-		public bool isCGB = false;
-		public bool isDoubleSpeed = false;
-
-		public byte[] ROMFile { get { return cart.ROMFile; } }
-		public bool FileLoaded { get { return cart.FileLoaded; } }
-
+		#region System Properties
+		public bool IsCGB;
+		public bool IsDoubleSpeed;
+		#endregion
+		
 		private bool DMATransferModeEnabled = false;
 
 		private byte[,] internalWRAM;//0xC000-0xDFFF
@@ -32,11 +33,8 @@ namespace GBEmu.Emulator
 		private byte[,] internalWRAM1;
 		private int internalWRAMBankNum = 0;
 
-		private byte[] hardwareRegisters = new byte[0x80];
-
-		private byte InterruptEnable;
 		private byte InterruptFlag;
-		private byte[] HRAM = new byte[0x7F];
+		private byte[] HRAM; //FF80 - FFFE
 
 		public const int CYCLES_PER_SECOND = 4194304;
 		public const int DIV_CYCLE = 256;
@@ -44,18 +42,25 @@ namespace GBEmu.Emulator
 
 		public MMU(byte[] inFile)
 		{
+			interruptManager = new InterruptManager();
 			cart = CartLoader.LoadCart(inFile);
 			input = new Input();
-			LCD = new Video();
-			initializeInternalRAM();
+			timer = new GBTimer();
+			LCD = new Video(interruptManager);
+			serial = new Serial();
+			audio = new Audio();
+			initializeInternalAndHRAM();
+			IsCGB = false;
+			IsDoubleSpeed = false;
 		}
 
-		public void initializeInternalRAM()
+		public void initializeInternalAndHRAM()
 		{
 			internalWRAM = new byte[8, 0x1000];
 			internalWRAM0 = new byte[0x1000];//0xC000 - CFFF
 			internalWRAM1 = new byte[7, 0x1000];//D000 - DFFF
 			internalWRAMBankNum = 1;
+			HRAM = new byte[0x7F];
 		}
 
 		public override byte Read(int position)
@@ -69,7 +74,7 @@ namespace GBEmu.Emulator
 				else if (position < 0xFE00) return 0;
 				else if (position < 0xFEA0) return LCD.Read(position);
 				else if (position < 0xFF00) return 0;
-				else if (position < 0xFF80)
+				else if (position < 0x10000)
 				{
 					switch (position & 0xFF)
 					{
@@ -83,8 +88,9 @@ namespace GBEmu.Emulator
 						case IOPorts.TMA:
 						case IOPorts.TAC:
 							return timer.Read(position);
+						case IOPorts.IE:
 						case IOPorts.IF:
-							return InterruptFlag;
+							return interruptManager.Read(position);
 						case IOPorts.NR10:
 						case IOPorts.NR11:
 						case IOPorts.NR12:
@@ -125,17 +131,15 @@ namespace GBEmu.Emulator
 						case IOPorts.OCPD:
 							return LCD.Read(position);
 						default:
+							if (position < 0xFFFF) return HRAM[position - 0xFF80];
 							return 0;
 					}
 				}
-				else if (position < 0xFFFF) return HRAM[position - 0xFF80];
-				else if (position == 0xFFFF) return InterruptEnable;
 				else return 0;
 			}
 			else
 			{
-				if (position < 0xFFFF) return HRAM[position - 0xFF80];
-				else return 0;
+				return HighRamRead(position);
 			}
 		}
 
@@ -150,6 +154,15 @@ namespace GBEmu.Emulator
 			else return 0;
 		}
 
+		private byte HighRamRead(int position)
+		{
+			if (position >= 0xFF80 && position < 0x10000)
+			{
+				return HRAM[position - 0xFF80];
+			}
+			else return 0;
+		}
+
 		public override void Write(int position, byte value)
 		{
 			if (position < 0x8000) cart.Write(position, value);
@@ -160,26 +173,36 @@ namespace GBEmu.Emulator
 			else if (position < 0xFE00) return;
 			else if (position < 0xFEA0) LCD.Write(position, value);
 			else if (position < 0xFF00) return;
-			else if (position < 0xFF80)
+			else if (position < 0x10000)
 			{
 				switch (position & 0xFF)
 				{
+					#region Writes to Input
 					case IOPorts.P1:
 						input.Write(position, value);
 						break;
+					#endregion
+					#region Writes to Serial
 					case IOPorts.SB:
 					case IOPorts.SC:
 						serial.Write(position, value);
 						break;
+					#endregion
+					#region Writes to Timer
 					case IOPorts.DIV:
 					case IOPorts.TIMA:
 					case IOPorts.TMA:
 					case IOPorts.TAC:
 						timer.Write(position, value);
 						break;
+					#endregion
+					#region Writes to InterruptManager
+					case IOPorts.IE:
 					case IOPorts.IF:
-						InterruptFlag = value;
+						interruptManager.Write(position, value);
 						break;
+					#endregion
+					#region Writes to Sound
 					case IOPorts.NR10:
 					case IOPorts.NR11:
 					case IOPorts.NR12:
@@ -203,6 +226,8 @@ namespace GBEmu.Emulator
 					case IOPorts.NR52:
 						audio.Write(position, value);
 						break;
+					#endregion
+					#region Writes to Video
 					case IOPorts.LCDC:
 					case IOPorts.STAT:
 					case IOPorts.SCX:
@@ -226,13 +251,12 @@ namespace GBEmu.Emulator
 							DMATransferOAM(value);
 						}
 						break;
+					#endregion
 					default:
+						HighRamWrite(position, value);
 						break;
 				}
 			}
-			else if (position < 0xFFFF) HRAM[position - 0xFF80] = value;
-			else if (position == 0xFFFF) InterruptEnable = value;
-			else return;
 		}
 
 		private void InternalRamWrite(int position, byte value)
@@ -241,6 +265,14 @@ namespace GBEmu.Emulator
 			{
 				if (position < 0xD000) internalWRAM[0, position - 0xC000] = value;
 				else if (position < 0xE000) internalWRAM[internalWRAMBankNum, position - 0xD000] = value;
+			}
+		}
+
+		private void HighRamWrite(int position, byte value)
+		{
+			if (position >= 0xFF80 && position < 0x10000)
+			{
+				HRAM[position - 0xFF80] = value;
 			}
 		}
 
@@ -266,23 +298,13 @@ namespace GBEmu.Emulator
 				}
 				timer.UpdateCounter(cycles);//Done
 				//serial.UpdateCounter(cycles);//Not implemented...
-				byte vbInt = LCD.VBlankInterrupt;
-				byte lcdcint = LCD.LCDCInterrupt;
 				byte serialint = serial.SerialInterrupt;
 				byte timerint = timer.TimerInterrupt;
 				byte joyint = input.JoyInterrupt;
-				if (vbInt != 0) InterruptFlag |= vbInt;
-				if (lcdcint != 0) InterruptFlag |= lcdcint;
 				if (serialint != 0) InterruptFlag |= serialint;
 				if (timerint != 0) InterruptFlag |= timerint;
 				if (joyint != 0) InterruptFlag |= joyint;
 			}
-		}
-
-		public void ResetInterruptFlag(int flagNum)
-		{
-			if (flagNum > 5) return;
-			InterruptFlag ^= (byte)(1 << flagNum);
 		}
 	}
 }

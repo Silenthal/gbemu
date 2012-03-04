@@ -6,13 +6,15 @@ using System.Windows.Forms;
 
 namespace GBEmu.Render.Gdi
 {
-	public class GdiWindow : Control
+	public class GdiWindow : Control, IRenderable
 	{
 		Bitmap bx;
 
+		public byte[] pixData;
+
 		public GdiWindow()
 		{
-			
+			pixData = new byte[160 * 144 * 3];
 		}
 
 		protected override void OnCreateControl()
@@ -22,7 +24,15 @@ namespace GBEmu.Render.Gdi
 			base.OnCreateControl();
 		}
 
-		public void CopyImageData(byte[] pixData)
+		public void CopyData(byte[] imgData)
+		{
+			lock (pixData)
+			{
+				Array.Copy(imgData, pixData, pixData.Length);
+			}
+		}
+
+		public void CopyImageData()
 		{
 			lock (bx)
 			{

@@ -12,12 +12,12 @@ namespace GBEmu.Emulator
 	{
 		#region System Components
 		public Input input;
-		public GBTimer timer;
-		public Cart cart;
+		private GBTimer timer;
+		private Cart cart;
 		public Video LCD;
-		public Serial serial;
-		public Audio audio;
-		public InterruptManager interruptManager;
+		private Serial serial;
+		private Audio audio;
+		private InterruptManager interruptManager;
 		#endregion
 
 		#region System Properties
@@ -40,13 +40,13 @@ namespace GBEmu.Emulator
 		public const int DIV_CYCLE = 256;
 		public const int DMA_CYCLE = 670;
 
-		public MMU(byte[] inFile)
+		public MMU(byte[] inFile, InterruptManager iM, GBEmu.Render.IRenderable screen)
 		{
-			interruptManager = new InterruptManager();
+			interruptManager = iM;
 			cart = CartLoader.LoadCart(inFile);
-			input = new Input();
-			timer = new GBTimer();
-			LCD = new Video(interruptManager);
+			input = new Input(iM);
+			timer = new GBTimer(iM);
+			LCD = new Video(interruptManager, screen);
 			serial = new Serial();
 			audio = new Audio();
 			initializeInternalAndHRAM();
@@ -131,7 +131,7 @@ namespace GBEmu.Emulator
 						case IOPorts.OCPD:
 							return LCD.Read(position);
 						default:
-							if (position < 0xFFFF) return HRAM[position - 0xFF80];
+							if (position < 0xFFFF) return HighRamRead(position);
 							return 0;
 					}
 				}
@@ -230,18 +230,26 @@ namespace GBEmu.Emulator
 					#region Writes to Video
 					case IOPorts.LCDC:
 					case IOPorts.STAT:
-					case IOPorts.SCX:
 					case IOPorts.SCY:
+					case IOPorts.SCX:
 					case IOPorts.LY:
 					case IOPorts.LYC:
+					case IOPorts.DMA:
 					case IOPorts.BGP:
 					case IOPorts.OBP0:
 					case IOPorts.OBP1:
-					case IOPorts.WX:
 					case IOPorts.WY:
+					case IOPorts.WX:
+					case IOPorts.KEY1:
 					case IOPorts.VBK:
-					case IOPorts.BCPD:
+					case IOPorts.HDMA1:
+					case IOPorts.HDMA2:
+					case IOPorts.HDMA3:
+					case IOPorts.HDMA4:
+					case IOPorts.HDMA5:
+					case IOPorts.RP:
 					case IOPorts.BCPS:
+					case IOPorts.BCPD:
 					case IOPorts.OCPS:
 					case IOPorts.OCPD:
 						LCD.Write(position, value);
@@ -281,9 +289,9 @@ namespace GBEmu.Emulator
 			int startAddress = transferDetails << 8;
 			for (int i = 0; i < 0xA0; i++)
 			{
-				LCD.OAM[i] = Read(startAddress + 1);
+				LCD.OAM[i] = Read(startAddress + i);
 			}
-			LCD.ReconstructOAMTable();
+			LCD.ReconstructOAMTableDMG();
 		}
 
 		public override void UpdateCounter(int cycles)
@@ -299,11 +307,7 @@ namespace GBEmu.Emulator
 				timer.UpdateCounter(cycles);//Done
 				//serial.UpdateCounter(cycles);//Not implemented...
 				byte serialint = serial.SerialInterrupt;
-				byte timerint = timer.TimerInterrupt;
-				byte joyint = input.JoyInterrupt;
 				if (serialint != 0) InterruptFlag |= serialint;
-				if (timerint != 0) InterruptFlag |= timerint;
-				if (joyint != 0) InterruptFlag |= joyint;
 			}
 		}
 	}

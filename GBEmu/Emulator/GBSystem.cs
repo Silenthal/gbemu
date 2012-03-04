@@ -9,8 +9,10 @@ using GBEmu.Render.Gdi;
 
 namespace GBEmu.Emulator
 {
+	public enum GBSystemState { Stopped, Running, Paused }
 	class GBSystem
 	{
+		public GBSystemState state;
 		public CPU cpu;
 		Stopwatch stopwatch;
 		public bool Run = false;
@@ -21,7 +23,6 @@ namespace GBEmu.Emulator
 		public int ExecutedFrames;
 		public byte[] newFrame { get { return cpu.mmu.LCD.LCDMap; } }
 
-
 		public GBSystem(GdiWindow renderWindow)
 		{
 			stopwatch = new Stopwatch();
@@ -29,37 +30,15 @@ namespace GBEmu.Emulator
 			ExecutedFrames = 0;
 		}
 
-		public GBSystem(byte[] loadFile)
-		{
-			stopwatch = new Stopwatch();
-			cpu = new CPU(loadFile);
-			input = cpu.mmu.input;
-		}
-
 		public void LoadFile(byte[] loadFile)
 		{
-			cpu = new CPU(loadFile);
+			cpu = new CPU(loadFile, screen);
+			input = cpu.mmu.input;
 		}
 
 		public void KeyChange(GBKeys key, bool isDown)
 		{
-			switch (key)
-			{
-				case GBKeys.Up:
-				case GBKeys.Down:
-				case GBKeys.Left:
-				case GBKeys.Right:
-					input.KeyChange(key, true, isDown);
-					break;
-				case GBKeys.A:
-				case GBKeys.B:
-				case GBKeys.Start:
-				case GBKeys.Select:
-					input.KeyChange(key, false, isDown);
-					break;
-				default:
-					break;
-			}
+			input.KeyChange(key, isDown);
 		}
 
 		public void DoWork()
@@ -71,11 +50,7 @@ namespace GBEmu.Emulator
 				cpu.step(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
 				ExecutedFrames++;
 				while (stopwatch.Elapsed < frame) { }
-				lock (screen)
-				{
-					screen.CopyImageData(cpu.mmu.LCD.LCDMap);
-					screen.Invalidate();
-				}
+				screen.Invalidate();
 			}
 		}
 

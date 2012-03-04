@@ -21,7 +21,6 @@ namespace GBEmu
         TimeSpan frame = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long)59.7275005);
         bool WorkDone = false;
         
-        
 
         public MainForm()
         {
@@ -86,7 +85,7 @@ namespace GBEmu
             }
             else
             {
-                gdiWindow1.CopyImageData(frame);
+                gdiWindow1.CopyImageData();
                 gdiWindow1.Invalidate();
             }
         }

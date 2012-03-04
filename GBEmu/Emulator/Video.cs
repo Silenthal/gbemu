@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using GBEmu.Render;
 
 namespace GBEmu.Emulator
 {
@@ -51,6 +52,7 @@ namespace GBEmu.Emulator
 	class Video : TimedIODevice
 	{
 		private InterruptManager interruptManager;
+		private IRenderable screen;
 		public int ExecutedFrameCycles { get { return CycleCounter; } }
 		public bool IsCGB { get; set; }
 		#region Screen constants
@@ -543,8 +545,9 @@ namespace GBEmu.Emulator
 
 		private SpriteRef[] SpriteTable;
 
-		public Video(InterruptManager iM)
+		public Video(InterruptManager iM, IRenderable newScreen)
 		{
+			screen = newScreen;
 			interruptManager = iM;
 			SpriteTable = new SpriteRef[40];
 			VramBank = 0;
@@ -876,7 +879,7 @@ namespace GBEmu.Emulator
 			}
 		}
 
-		public void ReconstructOAMTable()
+		public void ReconstructOAMTableDMG()
 		{
 			for (int i = 0; i < 40; i++)
 			{
@@ -884,7 +887,7 @@ namespace GBEmu.Emulator
 				{
 					OAMIndex = i * 4,
 					YOffset = OAM[i * 4],
-					XOffset = OAM[(i * 4) + 1], 
+					XOffset = OAM[(i * 4) + 1],
 					TileIndex = OAM[(i * 4) + 2],
 					SpriteProperties = OAM[(i * 4) + 3]
 				};
@@ -893,16 +896,13 @@ namespace GBEmu.Emulator
 				//If in DMG mode:
 				//-Sprites are sorted by their X position. In the case that their Xs are equal,
 				//-the one with the lower OAM position takes priority.
-				if (!IsCGB)
+				int x = i;
+				while (x > 0 && (SpriteTable[x] < SpriteTable[x - 1]))
 				{
-					int x = i;
-					while (x > 0 && IsCGB ? (SpriteTable[x].OAMIndex < SpriteTable[x - 1].OAMIndex) : (SpriteTable[x] < SpriteTable[x - 1]))
-					{
-						SpriteRef temp = SpriteTable[x - 1];
-						SpriteTable[x - 1] = SpriteTable[x];
-						SpriteTable[x] = temp;
-						x--;
-					}
+					SpriteRef temp = SpriteTable[x - 1];
+					SpriteTable[x - 1] = SpriteTable[x];
+					SpriteTable[x] = temp;
+					x--;
 				}
 			}
 		}
@@ -1015,6 +1015,7 @@ namespace GBEmu.Emulator
 								LCDMode = LCDMode.Mode1;
 								if (Mode1_VBlankInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
 								interruptManager.RequestInterrupt(InterruptType.VBlank);
+								screen.CopyData(LCDMap);
 							}
 							else
 							{
@@ -1043,7 +1044,7 @@ namespace GBEmu.Emulator
 				LY = 0;
 				for (int i = 0; i < LCDHeight; i++)
 				{
-					DrawDMGTiles();
+					DrawDMGScanline();
 					LY++;
 				}
 			}

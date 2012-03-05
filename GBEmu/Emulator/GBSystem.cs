@@ -80,13 +80,13 @@ namespace GBEmu.Emulator
 			StringBuilder sb = new StringBuilder();
 			lock (cpu)
 			{
-				sb.AppendLine(cpu.mmu.LCD.ExecutedFrameCycles.ToString());
-				sb.AppendLine(cpu.AF.w.ToString("X4"));
-				sb.AppendLine(cpu.BC.w.ToString("X4"));
-				sb.AppendLine(cpu.DE.w.ToString("X4"));
-				sb.AppendLine(cpu.HL.w.ToString("X4"));
-				sb.AppendLine(cpu.SP.w.ToString("X4"));
-				sb.AppendLine(cpu.PC.w.ToString("X4"));
+				sb.AppendLine("Cycles before Next Blit: " + cpu.mmu.LCD.ExecutedFrameCycles.ToString());
+				sb.AppendLine("PC = " + cpu.PC.w.ToString("X4"));
+				sb.AppendLine("AF = " + cpu.AF.w.ToString("X4"));
+				sb.AppendLine("BC = " + cpu.BC.w.ToString("X4"));
+				sb.AppendLine("DE = " + cpu.DE.w.ToString("X4"));
+				sb.AppendLine("HL = " + cpu.HL.w.ToString("X4"));
+				sb.AppendLine("SP = " + cpu.SP.w.ToString("X4"));
 			}
 			return sb.ToString();
 		}

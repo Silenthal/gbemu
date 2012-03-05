@@ -22,16 +22,11 @@ namespace GBEmu.Emulator
 		private bool DMATransferModeEnabled = false;
 
 		private byte[,] internalWRAM;//0xC000-0xDFFF
-
-		private byte[] internalWRAM0;
-		private byte[,] internalWRAM1;
 		private int internalWRAMBankNum = 0;
 
-		private byte InterruptFlag;
 		private byte[] HRAM; //FF80 - FFFE
-
+		
 		public const int CYCLES_PER_SECOND = 4194304;
-		public const int DIV_CYCLE = 256;
 		public const int DMA_CYCLE = 670;
 
 		public MMU(byte[] inFile, InterruptManager iM, GBEmu.Render.IRenderable screen)
@@ -50,10 +45,7 @@ namespace GBEmu.Emulator
 
 		public void initializeInternalAndHRAM()
 		{
-			internalWRAM = new byte[8, 0x1000];
-			internalWRAM0 = new byte[0x1000];//0xC000 - CFFF
-			internalWRAM1 = new byte[7, 0x1000];//D000 - DFFF
-			internalWRAMBankNum = 1;
+			internalWRAM = new byte[8, 0x1000];//0xC000 - 0xDFFF (0 is mapped to C000-CFFF)
 			HRAM = new byte[0x7F];
 		}
 
@@ -162,8 +154,8 @@ namespace GBEmu.Emulator
 			if (position < 0x8000) cart.Write(position, value);
 			else if (position < 0xA000) LCD.Write(position, value);
 			else if (position < 0xC000) cart.Write(position, value);
-			else if (position < 0xD000) internalWRAM0[position - 0xC000] = value;
-			else if (position < 0xE000) internalWRAM1[internalWRAMBankNum, position - 0xD000] = value;
+			else if (position < 0xD000) internalWRAM[0, position - 0xC000] = value;
+			else if (position < 0xE000) internalWRAM[internalWRAMBankNum, position - 0xD000] = value;
 			else if (position < 0xFE00) return;
 			else if (position < 0xFEA0) LCD.Write(position, value);
 			else if (position < 0xFF00) return;
@@ -299,9 +291,7 @@ namespace GBEmu.Emulator
 					DMATransferModeEnabled = false;
 				}
 				timer.UpdateCounter(cycles);//Done
-				//serial.UpdateCounter(cycles);//Not implemented...
-				byte serialint = serial.SerialInterrupt;
-				if (serialint != 0) InterruptFlag |= serialint;
+				serial.UpdateCounter(cycles);//Not implemented...
 			}
 		}
 	}

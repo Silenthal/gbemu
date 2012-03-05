@@ -5,12 +5,13 @@
 		private InterruptManager interruptManager;
 		private int TIMACounter;
 
-		private byte Divider;//FF04
-		private byte Timer;//FF05
+		private byte DIV_Divider;//FF04
+		private byte TIMA_Timer;//FF05
 		private byte TMA_TimerOverflowValue;//FF06
 		private byte TAC_TimerControl;//FF07
-		private bool IsTimerEnabled;
-		
+		private bool TimerEnabled { get { return (TAC_TimerControl & TAC_TimerStatus) != 0; } }
+		private int TAC_ClockIndex { get { return TAC_TimerControl & TAC_InputClock; } }
+
 		private const int DIV_CYCLE = 256;
 		private const int TAC_TimerStatus = 0x4;
 		private const int TAC_InputClock = 0x3;
@@ -26,10 +27,15 @@
 		{
 			interruptManager = iM;
 			CycleCounter = 0;
-			Divider = 0;
-			Timer = 0;
-			TMA_TimerOverflowValue = 0;
 			TIMACounter = 0;
+			InitializeDefaultValues();
+		}
+
+		public void InitializeDefaultValues()
+		{
+			DIV_Divider = 0;
+			TIMA_Timer = 0;
+			TMA_TimerOverflowValue = 0;
 			TAC_TimerControl = 0;
 		}
 
@@ -38,9 +44,9 @@
 			switch (position & 0xFF)
 			{
 				case IOPorts.DIV:
-					return Divider;
+					return DIV_Divider;
 				case IOPorts.TIMA:
-					return Timer;
+					return TIMA_Timer;
 				case IOPorts.TMA:
 					return TMA_TimerOverflowValue;
 				case IOPorts.TAC:
@@ -55,25 +61,20 @@
 			switch (position & 0xFF)
 			{
 				case IOPorts.DIV:
-					Divider = 0;
+					DIV_Divider = 0;
 					break;
 				case IOPorts.TIMA:
-					Timer = data;
+					TIMA_Timer = data;
 					break;
 				case IOPorts.TMA:
 					TMA_TimerOverflowValue = data;
 					break;
 				case IOPorts.TAC:
-					TAC_TimerControl = (byte)(data | 0xF8);
-					if ((TAC_TimerControl & TAC_TimerStatus) == 0)
+					if ((data & TAC_TimerStatus) == 1 && !TimerEnabled)
 					{
 						TIMACounter = 0;
-						IsTimerEnabled = false;
 					}
-					else
-					{
-						IsTimerEnabled = true;
-					}
+					TAC_TimerControl = (byte)(data | 0xF8);
 					break;
 				default:
 					break;
@@ -85,18 +86,18 @@
 			CycleCounter += cycles;//CycleCounter will be keeping track of divider cycles
 			if (CycleCounter >= DIV_CYCLE)//Increment every 256 cycles
 			{
-				Divider++;
+				DIV_Divider++;
 				CycleCounter &= 0xFF;
 			}
-			if ((TAC_TimerControl & TAC_TimerStatus) != 0)//If timer is started...
+			if (TimerEnabled)//If timer is started...
 			{
 				TIMACounter += cycles;
-				if (TIMACounter >= TIMATimings[TAC_TimerControl & TAC_InputClock])//Increment at rate in timings table
+				if (TIMACounter >= TIMATimings[TAC_ClockIndex])//Increment at rate in timings table
 				{
-					Timer++;
-					if (Timer == 0)
+					TIMA_Timer++;
+					if (TIMA_Timer == 0)
 					{
-						Timer = TMA_TimerOverflowValue;
+						TIMA_Timer = TMA_TimerOverflowValue;
 						interruptManager.RequestInterrupt(InterruptType.Timer);
 					}
 				}

@@ -2,8 +2,6 @@
 {
     class Serial : TimedIODevice
     {
-        public byte SerialInterrupt { get { return 0; } }
-
         public Serial()
         {
 

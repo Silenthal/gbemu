@@ -228,7 +228,8 @@ namespace GBEmu.Emulator
 								Register address = new Register();
 								address.lo = ReadPC();
 								address.hi = ReadPC();
-								Write(address.w++, SP.lo);
+								Write(address.w, SP.lo);
+								address.w++;
 								Write(address.w, SP.hi);
 								break;
 							case 0x9://add hl,bc
@@ -313,7 +314,8 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref HL);
 								break;
 							case 0x22://ldi [hl],a
-								Write(HL.w++, AF.hi);
+								Write(HL.w, AF.hi);
+								HL.w++;
 								break;
 							case 0x23://inc hl
 								Inc16(ref HL.w);
@@ -350,7 +352,8 @@ namespace GBEmu.Emulator
 								AddHL(HL.w);
 								break;
 							case 0x2A://ldi a,[hl]
-								AF.hi = Read(HL.w++);
+								AF.hi = Read(HL.w);
+								HL.w++;
 								break;
 							case 0x2B://dec hl
 								Dec16(ref HL.w);
@@ -378,7 +381,8 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref SP);
 								break;
 							case 0x32://ldd [hl],a
-								Write(HL.w--, AF.hi);
+								Write(HL.w, AF.hi);
+								HL.w--;
 								break;
 							case 0x33://inc sp
 								Inc16(ref SP.w);
@@ -408,7 +412,8 @@ namespace GBEmu.Emulator
 								AddHL(SP.w);
 								break;
 							case 0x3A://ldd a,[hl]
-								AF.hi = Read(HL.w--);
+								AF.hi = Read(HL.w);
+								HL.w--;
 								break;
 							case 0x3B://dec sp
 								Dec16(ref SP.w);
@@ -887,7 +892,7 @@ namespace GBEmu.Emulator
 							case 0xD2://jp nc, nnnn
 								Jump(!IsCarry);
 								break;
-							case 0xD3://----
+							case 0xD3://--
 								break;
 							case 0xD4://call nc, nnnn
 								Call(!IsCarry);
@@ -910,12 +915,12 @@ namespace GBEmu.Emulator
 							case 0xDA://jp c,nnnn
 								Jump(IsCarry);
 								break;
-							case 0xDB://---
+							case 0xDB://--
 								break;
 							case 0xDC://call c,nnnn
 								Call(IsCarry);
 								break;
-							case 0xDD://---
+							case 0xDD://--
 								break;
 							case 0xDE://sbc a,nn
 								SubA(ReadPC(), true);
@@ -938,9 +943,9 @@ namespace GBEmu.Emulator
 								ldcaddress |= BC.lo;
 								Write(ldcaddress, AF.hi);
 								break;
-							case 0xE3://---
+							case 0xE3://--
 								break;
-							case 0xE4://---
+							case 0xE4://--
 								break;
 							case 0xE5://push hl
 								Push(HL.w);
@@ -963,11 +968,11 @@ namespace GBEmu.Emulator
 								temp.hi = ReadPC();
 								Write(temp.w, AF.hi);
 								break;
-							case 0xEB://---
+							case 0xEB://--
 								break;
-							case 0xEC://---
+							case 0xEC://--
 								break;
-							case 0xED://---
+							case 0xED://--
 								break;
 							case 0xEE://xor nn
 								XorA(ReadPC());
@@ -1904,7 +1909,15 @@ namespace GBEmu.Emulator
 		}
 		private byte ReadPC()
 		{
-			return Read(PC.w++);
+			byte read = Read(PC.w);
+			PC.w++;
+			return read;
+		}
+		private byte ReadSP()
+		{
+			byte read = Read(SP.w);
+			SP.w++;
+			return read;
 		}
 		private void Write(ushort dest, byte data)
 		{
@@ -2157,13 +2170,15 @@ namespace GBEmu.Emulator
 		}
 		private void Push(ushort pushData)
 		{
-			Write(SP.w--, (byte)(pushData >> 8));
-			Write(SP.w--, (byte)pushData);
+			Write(SP.w, (byte)(pushData >> 8));
+			SP.w--;
+			Write(SP.w, (byte)pushData);
+			SP.w--;
 		}
 		private void Pop(ref ushort popReg)
 		{
-			ushort x = Read(SP.w++);
-			x |= (ushort)(Read(SP.w++) << 8);
+			ushort x = ReadSP();
+			x |= (ushort)(ReadSP() << 8);
 			popReg = x;
 		}
 		private void PCChange(ushort newVal)

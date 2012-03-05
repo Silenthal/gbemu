@@ -16,21 +16,18 @@ namespace GBEmu.Emulator
 	public enum CPUState { Normal, Halt, Stop }
 	class CPU
 	{
-		public const UInt32 DMGCycles = 4194304;
-		public const UInt32 CGB_SingleCycles = 4194300;
-		public const UInt32 SGB_Cycles = 4295454;
-		public const UInt32 CGB_DoubleCycles = 8338000;
-		public const int SCREEN_DRAW_CYCLES = 70224;
-		public const int LY_ONSCREEN_CYCLES = 65664;
-		public const int CYCLES_PER_SECOND = 4194304;
-		public const int DIV_CYCLE = 256;
-		public const int DMA_CYCLE = 670;
+		//public const UInt32 DMGCycles = 4194304;
+		//public const UInt32 CGB_SingleCycles = 4194300;
+		//public const UInt32 SGB_Cycles = 4295454;
+		//public const UInt32 CGB_DoubleCycles = 8338000;
+		//public const int DMA_CYCLE = 670;
 
+		public CPUState state;
 
 		private InterruptManager interruptManager;
-		public CPUState state;
-		public bool FrameDone = false;
-		private bool RepeatLastInstruction = false;
+		
+		private bool RepeatLastInstruction;
+
 		#region Interrupt Vectors
 		private const ushort IntVector_VBlank = 0x40;
 		private const ushort IntVector_LCDC = 0x48;
@@ -38,6 +35,8 @@ namespace GBEmu.Emulator
 		private const ushort IntVector_Serial = 0x58;
 		private const ushort IntVector_Joypad = 0x60;
 		#endregion
+
+		#region Flag Properties
 		private bool IsZero
 		{
 			get
@@ -110,16 +109,7 @@ namespace GBEmu.Emulator
 				}
 			}
 		}
-		public Register AF;
-		public Register BC;
-		public Register DE;
-		public Register HL;
-		public Register PC;
-		public Register SP;
-
-		public MMU mmu;
-
-		private int CycleCounter;
+		#endregion
 
 		#region Flag Constants
 		#region Enable Constants (OR)
@@ -158,12 +148,29 @@ namespace GBEmu.Emulator
 		private const byte RESET_0 = 0xFE;
 		#endregion
 		#endregion
+		
+		#region Registers
+		public Register AF;
+		public Register BC;
+		public Register DE;
+		public Register HL;
+		public Register PC;
+		public Register SP;
+		#endregion
+		
+		public MMU mmu;
+
+		private int CycleCounter;
 
 		public CPU(byte[] inFile, GBEmu.Render.IRenderable screen)
 		{
 			interruptManager = new InterruptManager();
 			mmu = new MMU(inFile, interruptManager, screen);
-			//GB defaults...
+			InitializeDefaultValues();
+		}
+
+		public void InitializeDefaultValues()
+		{
 			PC.w = 0x0100;
 			SP.w = 0xFFFE;
 			AF.w = 0x01B0;
@@ -172,6 +179,7 @@ namespace GBEmu.Emulator
 			HL.w = 0x014D;
 			CycleCounter = 0;
 			state = CPUState.Normal;
+			RepeatLastInstruction = false;
 		}
 
 		public void step(int cycles)
@@ -1032,7 +1040,6 @@ namespace GBEmu.Emulator
 				cycles -= CycleCounter;
 				mmu.UpdateCounter(CycleCounter);
 			}
-			FrameDone = true;
 		}
 
 		public void CBstep()

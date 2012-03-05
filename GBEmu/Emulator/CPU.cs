@@ -1014,8 +1014,8 @@ namespace GBEmu.Emulator
 							case 0xF8://ldhl sp,nn
 								byte offHL = ReadPC();
 								ushort tempxxx = SP.w;
-								int tempAHL = SP.w + ~(offHL - 1);
-								int tempAHX = SP.w ^ ~(offHL - 1) ^ tempAHL;
+								int tempAHL = SP.w + (sbyte)offHL;
+								int tempAHX = SP.w ^ (sbyte)offHL ^ tempAHL;
 								IsHalfCarry = (tempAHX & 0x1000) != 0;
 								IsCarry = (tempAHX & 0x10000) != 0;
 								IsNegativeOp = false;
@@ -1947,7 +1947,7 @@ namespace GBEmu.Emulator
 		private void Dec(ref byte refreg)
 		{
 			int temp = refreg - 1;
-			int tempover = refreg ^ ~(1) ^ temp;
+			int tempover = refreg ^ 0xFF ^ temp;
 			IsHalfCarry = ((tempover & 0x10) != 0);
 			IsNegativeOp = true;
 			refreg--;
@@ -1992,13 +1992,13 @@ namespace GBEmu.Emulator
 		}
 		private void AddSP(byte refreg)
 		{
-			int temp = SP.w + ~(refreg - 1);
-			int tempover = SP.w ^ ~(refreg - 1) ^ temp;
+			int temp = SP.w + (sbyte)refreg;
+			int tempover = SP.w ^ (sbyte)refreg ^ temp;
 			IsHalfCarry = ((tempover & 0x1000) != 0);
 			IsCarry = ((tempover & 0x10000) != 0);
 			IsNegativeOp = false;
 			IsZero = false;
-			SP.w += (ushort)~(refreg - 1);
+			SP.w = (ushort)temp;
 			CycleCounter += 8;
 		}
 		private void AndA(byte val)
@@ -2131,7 +2131,7 @@ namespace GBEmu.Emulator
 			byte off = ReadPC();
 			if (isCondTrue)
 			{
-				PCChange((ushort)(PC.w + ~(off - 1)));
+				PCChange((ushort)(PC.w + (sbyte)off));
 			}
 		}
 		private void CheckedReturn(bool isCondTrue)

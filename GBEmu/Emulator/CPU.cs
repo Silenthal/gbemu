@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Runtime.InteropServices;
 
 namespace GBEmu.Emulator
@@ -19,6 +16,17 @@ namespace GBEmu.Emulator
 	public enum CPUState { Normal, Halt, Stop }
 	class CPU
 	{
+		public const UInt32 DMGCycles = 4194304;
+		public const UInt32 CGB_SingleCycles = 4194300;
+		public const UInt32 SGB_Cycles = 4295454;
+		public const UInt32 CGB_DoubleCycles = 8338000;
+		public const int SCREEN_DRAW_CYCLES = 70224;
+		public const int LY_ONSCREEN_CYCLES = 65664;
+		public const int CYCLES_PER_SECOND = 4194304;
+		public const int DIV_CYCLE = 256;
+		public const int DMA_CYCLE = 670;
+
+
 		private InterruptManager interruptManager;
 		public CPUState state;
 		public bool FrameDone = false;
@@ -173,7 +181,7 @@ namespace GBEmu.Emulator
 				//Stop doesn't increment the PC, and turns off the LCD.
 				//Also, speed switch occurs after stop is used.
 				CycleCounter = 0;
-				if (interruptManager.InterruptMasterEnable && interruptManager.InterruptsReady) CheckInterrupts();
+				if (interruptManager.InterruptsEnabled() && interruptManager.InterruptsReady) CheckInterrupts();
 				switch (state)
 				{
 					case CPUState.Halt:
@@ -584,7 +592,7 @@ namespace GBEmu.Emulator
 								Write(HL.w, HL.lo);
 								break;
 							case 0x76://halt
-								if (interruptManager.InterruptMasterEnable) state = CPUState.Halt;
+								if (interruptManager.InterruptsEnabled()) state = CPUState.Halt;
 								else if (interruptManager.InterruptsReady)
 								{
 									//Handle GBC mode
@@ -985,7 +993,7 @@ namespace GBEmu.Emulator
 								AF.hi = Read(ldrcaddress);
 								break;
 							case 0xF3://di
-								interruptManager.InterruptMasterEnable = false;
+								interruptManager.DisableInterrupts();
 								break;
 							case 0xF4://--
 								break;
@@ -1021,7 +1029,7 @@ namespace GBEmu.Emulator
 								AF.hi = Read(tempLoc.w);
 								break;
 							case 0xFB://ei
-								interruptManager.InterruptMasterEnable = true;
+								interruptManager.EnableInterrupts();
 								break;
 							case 0xFC://--
 								break;
@@ -1882,12 +1890,12 @@ namespace GBEmu.Emulator
 				}
 				Push(PC.w);
 				PCChange(intVector);
-				interruptManager.InterruptMasterEnable = false;
+				interruptManager.DisableInterrupts();
 				state = CPUState.Normal;
 			}
 		}
 
-		#region Instruction Implememtation
+		#region Instruction Implementation
 		private byte Read(ushort src)
 		{
 			//Reads take 4 cycles
@@ -2128,7 +2136,7 @@ namespace GBEmu.Emulator
 			ushort retAddr = 0;
 			Pop(ref retAddr);
 			PCChange(retAddr);
-			if (enableInterrupts) interruptManager.InterruptMasterEnable = true;
+			if (enableInterrupts) interruptManager.EnableInterrupts();
 		}
 		private void Call(bool isFlag)
 		{

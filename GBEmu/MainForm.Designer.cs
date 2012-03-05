@@ -48,7 +48,7 @@
 			this.deLabel = new System.Windows.Forms.Label();
 			this.bcLabel = new System.Windows.Forms.Label();
 			this.afLabel = new System.Windows.Forms.Label();
-			this.gdiWindow1 = new GBEmu.Render.Gdi.GdiWindow();
+			this.xnaRenderWindow1 = new GBEmu.Render.XNA.XNARenderWindow();
 			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -58,7 +58,7 @@
             this.fileToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip1.Name = "menuStrip1";
-			this.menuStrip1.Size = new System.Drawing.Size(440, 24);
+			this.menuStrip1.Size = new System.Drawing.Size(432, 24);
 			this.menuStrip1.TabIndex = 0;
 			this.menuStrip1.Text = "menuStrip1";
 			// 
@@ -226,19 +226,20 @@
 			this.afLabel.TabIndex = 36;
 			this.afLabel.Text = "AF";
 			// 
-			// gdiWindow1
+			// xnaRenderWindow1
 			// 
-			this.gdiWindow1.Location = new System.Drawing.Point(12, 27);
-			this.gdiWindow1.Name = "gdiWindow1";
-			this.gdiWindow1.Size = new System.Drawing.Size(160, 144);
-			this.gdiWindow1.TabIndex = 26;
-			this.gdiWindow1.Text = "gdiWindow1";
+			this.xnaRenderWindow1.Location = new System.Drawing.Point(12, 27);
+			this.xnaRenderWindow1.Name = "xnaRenderWindow1";
+			this.xnaRenderWindow1.Size = new System.Drawing.Size(160, 144);
+			this.xnaRenderWindow1.TabIndex = 42;
+			this.xnaRenderWindow1.Text = "xnaRenderWindow1";
 			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(440, 215);
+			this.ClientSize = new System.Drawing.Size(432, 215);
+			this.Controls.Add(this.xnaRenderWindow1);
 			this.Controls.Add(this.pcLabel);
 			this.Controls.Add(this.spLabel);
 			this.Controls.Add(this.hlLabel);
@@ -254,7 +255,6 @@
 			this.Controls.Add(this.richTextBox1);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.menuStrip1);
-			this.Controls.Add(this.gdiWindow1);
 			this.Controls.Add(this.button1);
 			this.KeyPreview = true;
 			this.MainMenuStrip = this.menuStrip1;
@@ -275,8 +275,7 @@
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
-        private System.Windows.Forms.Button button1;
-        private GBEmu.Render.Gdi.GdiWindow gdiWindow1;
+		private System.Windows.Forms.Button button1;
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.RichTextBox richTextBox1;
@@ -291,7 +290,8 @@
         private System.Windows.Forms.Label hlLabel;
         private System.Windows.Forms.Label deLabel;
         private System.Windows.Forms.Label bcLabel;
-        private System.Windows.Forms.Label afLabel;
+		private System.Windows.Forms.Label afLabel;
+		private Render.XNA.XNARenderWindow xnaRenderWindow1;
     }
 }
 

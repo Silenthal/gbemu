@@ -1,33 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Threading;
+using System.Text;
 using GBEmu.Render.Gdi;
+using GBEmu.Render;
 
 namespace GBEmu.Emulator
 {
 	public enum GBSystemState { Stopped, Running, Paused }
 	class GBSystem
 	{
+		static TimeSpan frame = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long)59.7275005);
+		
 		public GBSystemState state;
+		
 		public CPU cpu;
-		Stopwatch stopwatch;
-		public bool Run = false;
-		TimeSpan frame = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long)59.7275005);
-		public bool FileLoaded { get; private set; }
-		volatile GdiWindow screen;
 		public Input input;
-		public int ExecutedFrames;
-		public byte[] newFrame { get { return cpu.mmu.LCD.LCDMap; } }
+		
+		Stopwatch stopwatch;
+		
+		public bool FileLoaded { get; private set; }
 
-		public GBSystem(GdiWindow renderWindow)
+		volatile IRenderable screen;
+		
+		public int ExecutedFrames;
+
+		public GBSystem(IRenderable renderWindow)
 		{
 			stopwatch = new Stopwatch();
 			screen = renderWindow;
 			ExecutedFrames = 0;
+			state = GBSystemState.Stopped;
 		}
 
 		public void LoadFile(byte[] loadFile)
@@ -41,33 +43,52 @@ namespace GBEmu.Emulator
 			input.KeyChange(key, isDown);
 		}
 
-		public void DoWork()
+		public void StartSystem()
 		{
+			state = GBSystemState.Running;
 			stopwatch.Start();
-			while (Run)
+			while (state != GBSystemState.Stopped)
 			{
-				stopwatch.Restart();
+				if (state == GBSystemState.Paused) continue;
+				stopwatch.Reset();
+				stopwatch.Start();
 				cpu.step(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
 				ExecutedFrames++;
 				while (stopwatch.Elapsed < frame) { }
-				screen.Invalidate();
+				screen.RenderFrame();
 			}
-		}
-
-		public void RunSingleFrame()
-		{
-			cpu.step(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
-			ExecutedFrames++;
+			stopwatch.Reset();
 		}
 
 		public void Stop()
 		{
-			Run = false;
+			state = GBSystemState.Stopped;
 		}
 
-		public void Start()
+		public void Resume()
 		{
-			Run = true;
+			state = GBSystemState.Running;
+		}
+
+		internal void Pause()
+		{
+			state = GBSystemState.Paused;
+		}
+
+		public string FetchCPUState()
+		{
+			StringBuilder sb = new StringBuilder();
+			lock (cpu)
+			{
+				sb.AppendLine(cpu.mmu.LCD.ExecutedFrameCycles.ToString());
+				sb.AppendLine(cpu.AF.w.ToString("X4"));
+				sb.AppendLine(cpu.BC.w.ToString("X4"));
+				sb.AppendLine(cpu.DE.w.ToString("X4"));
+				sb.AppendLine(cpu.HL.w.ToString("X4"));
+				sb.AppendLine(cpu.SP.w.ToString("X4"));
+				sb.AppendLine(cpu.PC.w.ToString("X4"));
+			}
+			return sb.ToString();
 		}
 	}
 }

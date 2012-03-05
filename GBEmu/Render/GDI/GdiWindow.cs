@@ -9,37 +9,33 @@ namespace GBEmu.Render.Gdi
 	public class GdiWindow : Control, IRenderable
 	{
 		Bitmap bx;
-
-		public byte[] pixData;
-
-		public GdiWindow()
-		{
-			pixData = new byte[160 * 144 * 3];
-		}
+		public int[] buffer;
 
 		protected override void OnCreateControl()
 		{
-			bx = new System.Drawing.Bitmap(160, 144, PixelFormat.Format24bppRgb);
+			buffer = new int[160 * 144];
+			bx = new System.Drawing.Bitmap(160, 144, PixelFormat.Format32bppArgb);
 			SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+			Application.Idle += delegate { Invalidate(); };
 			base.OnCreateControl();
 		}
 
-		public void CopyData(byte[] imgData)
+		public void CopyData(int[] newData)
 		{
-			lock (pixData)
+			lock (buffer)
 			{
-				Array.Copy(imgData, pixData, pixData.Length);
+				Array.Copy(newData, buffer, buffer.Length);
 			}
 		}
 
-		public void CopyImageData()
+		public void RenderFrame()
 		{
 			lock (bx)
 			{
-				BitmapData bxz = bx.LockBits(new Rectangle(0, 0, bx.Width, bx.Height), ImageLockMode.WriteOnly, bx.PixelFormat);
-				IntPtr xrg_start = bxz.Scan0;
-				Marshal.Copy(pixData, 0, xrg_start, pixData.Length);
-				bx.UnlockBits(bxz);
+				BitmapData bmData = bx.LockBits(new Rectangle(0, 0, bx.Width, bx.Height), ImageLockMode.WriteOnly, bx.PixelFormat);
+				IntPtr xrg_start = bmData.Scan0;
+				Marshal.Copy(buffer, 0, xrg_start, buffer.Length);
+				bx.UnlockBits(bmData);
 			}
 		}
 

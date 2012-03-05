@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace GBEmu.Emulator
 {
@@ -19,7 +16,7 @@ namespace GBEmu.Emulator
 		public CPUState cpuState { get; set; }
 		private InterruptType InterruptEnable;
 		private InterruptType InterruptFlag;
-		public bool InterruptMasterEnable { get; set; }
+		private bool InterruptMasterEnable;
 		public bool InterruptsReady { get { return (InterruptEnable & InterruptFlag) != InterruptType.None; } }
 
 		public InterruptManager()
@@ -54,6 +51,21 @@ namespace GBEmu.Emulator
 			{
 				InterruptFlag |= intType;
 			}
+		}
+
+		public bool InterruptsEnabled()
+		{
+			return InterruptMasterEnable;
+		}
+
+		public void DisableInterrupts()
+		{
+			InterruptMasterEnable = false;
+		}
+
+		public void EnableInterrupts()
+		{
+			InterruptMasterEnable = true;
 		}
 
 		public void ClearAllInterrupts()

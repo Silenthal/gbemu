@@ -294,5 +294,10 @@ namespace GBEmu.Emulator
 				serial.UpdateCounter(cycles);//Not implemented...
 			}
 		}
+
+		public void Stop()
+		{
+			LCD.SpeedSwitch();
+		}
 	}
 }

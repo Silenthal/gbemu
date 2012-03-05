@@ -201,30 +201,30 @@ namespace GBEmu.Emulator
 						switch (inst)
 						{
 							#region Ops 0x00-0x0F
-							case 0x0://nop
+							case 0x00://nop
 								break;
-							case 0x1://ld bc,nnnn
+							case 0x01://ld bc,nnnn
 								Load16Immediate(ref BC);
 								break;
-							case 0x2://ld [bc],a
+							case 0x02://ld [bc],a
 								Write(BC.w, AF.hi);
 								break;
-							case 0x3://inc bc
+							case 0x03://inc bc
 								Inc16(ref BC.w);
 								break;
-							case 0x4://inc b
+							case 0x04://inc b
 								Inc(ref BC.hi);
 								break;
-							case 0x5://dec b
+							case 0x05://dec b
 								Dec(ref BC.hi);
 								break;
-							case 0x6://ld b,nn
+							case 0x06://ld b,nn
 								BC.hi = ReadPC();
 								break;
-							case 0x7://rlca
+							case 0x07://rlca
 								RLC(ref AF.hi);
 								break;
-							case 0x8://ld [nnnn],sp
+							case 0x08://ld [nnnn],sp
 								Register address = new Register();
 								address.lo = ReadPC();
 								address.hi = ReadPC();
@@ -232,33 +232,31 @@ namespace GBEmu.Emulator
 								address.w++;
 								Write(address.w, SP.hi);
 								break;
-							case 0x9://add hl,bc
+							case 0x09://add hl,bc
 								AddHL(BC.w);
 								break;
-							case 0xA://ld a,[bc]
+							case 0x0A://ld a,[bc]
 								AF.hi = Read(BC.w);
 								break;
-							case 0xB://dec bc
+							case 0x0B://dec bc
 								Dec16(ref BC.w);
 								break;
-							case 0xC://inc c
+							case 0x0C://inc c
 								Inc(ref BC.lo);
 								break;
-							case 0xD://dec c
+							case 0x0D://dec c
 								Dec(ref BC.lo);
 								break;
-							case 0xE://ld c,nn
+							case 0x0E://ld c,nn
 								BC.lo = ReadPC();
 								break;
-							case 0xF://rrca
+							case 0x0F://rrca
 								RRC(ref AF.hi);
 								break;
 							#endregion
 							#region Ops 0x10-0x1F
 							case 0x10://stop
-								//Stop needs to turn off the LCD...
-								state = CPUState.Stop;
-								PC.w++;
+								Stop();
 								break;
 							case 0x11://ld de,nnnn
 								Load16Immediate(ref DE);
@@ -401,9 +399,7 @@ namespace GBEmu.Emulator
 								Write(HL.w, ReadPC());
 								break;
 							case 0x37://scf
-								IsCarry = true;
-								IsHalfCarry = false;
-								IsNegativeOp = false;
+								SCF();
 								break;
 							case 0x38://jr c,nn
 								JumpRelative(IsCarry);
@@ -428,9 +424,7 @@ namespace GBEmu.Emulator
 								AF.hi = ReadPC();
 								break;
 							case 0x3F://ccf
-								IsCarry = !IsCarry;
-								IsHalfCarry = false;
-								IsNegativeOp = false;
+								CCF();
 								break;
 							#endregion
 							#region Ops 0x40-0x4F
@@ -597,13 +591,7 @@ namespace GBEmu.Emulator
 								Write(HL.w, HL.lo);
 								break;
 							case 0x76://halt
-								if (interruptManager.InterruptsEnabled()) state = CPUState.Halt;
-								else if (interruptManager.InterruptsReady)
-								{
-									//Handle GBC mode
-									if (mmu.IsCGB) CycleCounter += 4;
-									else RepeatLastInstruction = true;
-								}
+								Halt();
 								break;
 							case 0x77://ld [hl],a
 								Write(HL.w, AF.hi);
@@ -1012,16 +1000,7 @@ namespace GBEmu.Emulator
 								RST(0x30);
 								break;
 							case 0xF8://ldhl sp,nn
-								byte offHL = ReadPC();
-								ushort tempxxx = SP.w;
-								int tempAHL = SP.w + (sbyte)offHL;
-								int tempAHX = SP.w ^ (sbyte)offHL ^ tempAHL;
-								IsHalfCarry = (tempAHX & 0x1000) != 0;
-								IsCarry = (tempAHX & 0x10000) != 0;
-								IsNegativeOp = false;
-								IsZero = false;
-								HL.w = (ushort)tempAHL;
-								CycleCounter += 4;
+								LdHLSPN();
 								break;
 							case 0xF9://ld sp,hl
 								SP.w = HL.w;
@@ -1900,10 +1879,9 @@ namespace GBEmu.Emulator
 			}
 		}
 
-		#region Instruction Implementation
+		#region Reading and writing
 		private byte Read(ushort src)
 		{
-			//Reads take 4 cycles
 			CycleCounter += 4;
 			return mmu.Read(src);
 		}
@@ -1921,15 +1899,18 @@ namespace GBEmu.Emulator
 		}
 		private void Write(ushort dest, byte data)
 		{
-			//Writes take 4 cycles.
 			CycleCounter += 4;
 			mmu.Write(dest, data);
 		}
-		private void Load16Immediate(ref Register reg)
+		private void PCChange(ushort newVal)
 		{
-			reg.lo = ReadPC();
-			reg.hi = ReadPC();
+			PC.w = newVal;
+			CycleCounter += 4;
 		}
+		#endregion
+
+		#region Instruction Implementation
+		#region 8-bit Arithmetic
 		private void Inc(ref byte refreg)
 		{
 			int temp = refreg + 1;
@@ -1938,11 +1919,6 @@ namespace GBEmu.Emulator
 			IsNegativeOp = false;
 			refreg++;
 			IsZero = (refreg == 0);
-		}
-		private void Inc16(ref ushort reg)
-		{
-			reg++;
-			CycleCounter += 4;
 		}
 		private void Dec(ref byte refreg)
 		{
@@ -1953,11 +1929,6 @@ namespace GBEmu.Emulator
 			refreg--;
 			IsZero = (refreg == 0);
 		}
-		private void Dec16(ref ushort reg)
-		{
-			reg--;
-			CycleCounter += 4;
-		}
 		private void AddA(byte add, bool addCarry)
 		{
 			byte tempAdd = (byte)(add + (addCarry ? IsCarry ? 1 : 0 : 0));
@@ -1967,7 +1938,7 @@ namespace GBEmu.Emulator
 			IsCarry = ((tempover & 0x100) != 0);
 			IsNegativeOp = false;
 			AF.hi += tempAdd;
-			IsZero = ( AF.hi == 0);
+			IsZero = (AF.hi == 0);
 		}
 		private void SubA(byte sub, bool subCarry)
 		{
@@ -1979,27 +1950,6 @@ namespace GBEmu.Emulator
 			IsNegativeOp = true;
 			AF.hi -= tempsub;
 			IsZero = (AF.hi == 0);
-		}
-		private void AddHL(ushort refreg)
-		{
-			int temp = HL.w + refreg;
-			int tempover = HL.w ^ refreg ^ temp;
-			IsHalfCarry = ((tempover & 0x1000) != 0);
-			IsCarry = ((tempover & 0x10000) != 0);
-			IsNegativeOp = false;
-			HL.w += refreg;
-			CycleCounter += 4;
-		}
-		private void AddSP(byte refreg)
-		{
-			int temp = SP.w + (sbyte)refreg;
-			int tempover = SP.w ^ (sbyte)refreg ^ temp;
-			IsHalfCarry = ((tempover & 0x1000) != 0);
-			IsCarry = ((tempover & 0x10000) != 0);
-			IsNegativeOp = false;
-			IsZero = false;
-			SP.w = (ushort)temp;
-			CycleCounter += 8;
 		}
 		private void AndA(byte val)
 		{
@@ -2034,33 +1984,61 @@ namespace GBEmu.Emulator
 			IsCarry = (tempX & 0x100) != 0;
 			IsZero = (temp & 0xFF) == 0;
 		}
+		#endregion
+
+		#region 16-bit Arithmetic
+		private void Inc16(ref ushort reg)
+		{
+			reg++;
+			CycleCounter += 4;
+		}
+		private void Dec16(ref ushort reg)
+		{
+			reg--;
+			CycleCounter += 4;
+		}
+		private void AddHL(ushort refreg)
+		{
+			int temp = HL.w + refreg;
+			int tempover = HL.w ^ refreg ^ temp;
+			IsHalfCarry = ((tempover & 0x1000) != 0);
+			IsCarry = ((tempover & 0x10000) != 0);
+			IsNegativeOp = false;
+			HL.w += refreg;
+			CycleCounter += 4;
+		}
+		private void AddSP(byte refreg)
+		{
+			int temp = SP.w + (sbyte)refreg;
+			int tempover = SP.w ^ (sbyte)refreg ^ temp;
+			IsHalfCarry = ((tempover & 0x1000) != 0);
+			IsCarry = ((tempover & 0x10000) != 0);
+			IsNegativeOp = false;
+			IsZero = false;
+			SP.w = (ushort)temp;
+			CycleCounter += 8;
+		}
+		private void LdHLSPN()
+		{
+			sbyte offHL = (sbyte)ReadPC();
+			ushort tempxxx = SP.w;
+			int tempAHL = SP.w + offHL;
+			int tempAHX = SP.w ^ offHL ^ tempAHL;
+			IsHalfCarry = (tempAHX & 0x1000) != 0;
+			IsCarry = (tempAHX & 0x10000) != 0;
+			IsNegativeOp = false;
+			IsZero = false;
+			HL.w = (ushort)tempAHL;
+			CycleCounter += 4;
+		}
+		#endregion
+
+		#region Rotate/Shift/Swap
 		private void Swap(ref byte val)
 		{
 			IsNegativeOp = IsHalfCarry = IsCarry = false;
 			IsZero = val == 0;
 			val = (byte)((val << 4) | (val >> 4));
-		}
-		private void Set(ref byte val, int bit)
-		{
-			byte[] setBits = new byte[8]
-			{
-				1, 2, 4, 8, 16, 32, 64, 128
-			};
-			val |= setBits[bit];
-		}
-		private void Reset(ref byte val, int bit)
-		{
-			byte[] resetBits = new byte[8]
-			{
-				0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F
-			};
-			val &= resetBits[bit];
-		}
-		private void Bit(byte val, int bit)
-		{
-			IsNegativeOp = false;
-			IsHalfCarry = true;
-			IsZero = (val & (1 << bit)) == 0;
 		}
 		private void RL(ref byte val)
 		{
@@ -2116,6 +2094,34 @@ namespace GBEmu.Emulator
 			val >>= 1;
 			IsZero = val == 0;
 		}
+		#endregion
+
+		#region Bit Operations
+		private void Bit(byte val, int bit)
+		{
+			IsNegativeOp = false;
+			IsHalfCarry = true;
+			IsZero = (val & (1 << bit)) == 0;
+		}
+		private void Set(ref byte val, int bit)
+		{
+			byte[] setBits = new byte[8]
+			{
+				1, 2, 4, 8, 16, 32, 64, 128
+			};
+			val |= setBits[bit];
+		}
+		private void Reset(ref byte val, int bit)
+		{
+			byte[] resetBits = new byte[8]
+			{
+				0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F
+			};
+			val &= resetBits[bit];
+		}
+		#endregion
+
+		#region Jump/Call/Return
 		private void Jump(bool isCondTrue)
 		{
 			Register jl = new Register();
@@ -2128,28 +2134,11 @@ namespace GBEmu.Emulator
 		}
 		private void JumpRelative(bool isCondTrue)
 		{
-			byte off = ReadPC();
+			sbyte off = (sbyte)ReadPC();
 			if (isCondTrue)
 			{
-				PCChange((ushort)(PC.w + (sbyte)off));
+				PCChange((ushort)(PC.w + off));
 			}
-		}
-		private void CheckedReturn(bool isCondTrue)
-		{
-			CycleCounter += 4;
-			if (isCondTrue)
-			{
-				ushort retAddr = 0;
-				Pop(ref retAddr);
-				PCChange(retAddr);
-			}
-		}
-		private void Return(bool enableInterrupts)
-		{
-			ushort retAddr = 0;
-			Pop(ref retAddr);
-			PCChange(retAddr);
-			if (enableInterrupts) interruptManager.EnableInterrupts();
 		}
 		private void Call(bool isFlag)
 		{
@@ -2162,12 +2151,73 @@ namespace GBEmu.Emulator
 				PCChange(rf.w);
 			}
 		}
+		private void Return(bool enableInterrupts)
+		{
+			ushort retAddr = 0;
+			Pop(ref retAddr);
+			PCChange(retAddr);
+			if (enableInterrupts) interruptManager.EnableInterrupts();
+		}
+		private void CheckedReturn(bool isCondTrue)
+		{
+			CycleCounter += 4;
+			if (isCondTrue)
+			{
+				ushort retAddr = 0;
+				Pop(ref retAddr);
+				PCChange(retAddr);
+			}
+		}
 		private void RST(byte jumpVector)
 		{
 			ushort jumpLoc = (ushort)(jumpVector & 0x38);
 			Push(PC.w);
 			PCChange(jumpLoc);
 		}
+		#endregion
+
+		#region CPU Commands
+		private void Halt()
+		{
+			if (!interruptManager.InterruptsEnabled() && interruptManager.InterruptsReady)
+			{
+				if (mmu.IsCGB) CycleCounter += 4;
+				else RepeatLastInstruction = true;
+			}
+			else
+			{
+				state = CPUState.Halt;
+			}
+		}
+		private void Stop()
+		{
+			state = CPUState.Stop;
+			PC.w++;
+			//mmu.Stop();
+		}
+		private void DI()
+		{
+			interruptManager.DisableInterrupts();
+		}
+		private void EI()
+		{
+			interruptManager.EnableInterrupts();
+		}
+		private void CCF()
+		{
+			IsCarry = !IsCarry;
+			IsHalfCarry = false;
+			IsNegativeOp = false;
+		}
+		private void SCF()
+		{
+			IsCarry = true;
+			IsHalfCarry = false;
+			IsNegativeOp = false;
+		}
+		#endregion
+
+		#region Stack Commands
 		private void Push(ushort pushData)
 		{
 			Write(SP.w, (byte)(pushData >> 8));
@@ -2181,11 +2231,15 @@ namespace GBEmu.Emulator
 			x |= (ushort)(ReadSP() << 8);
 			popReg = x;
 		}
-		private void PCChange(ushort newVal)
+		#endregion
+
+		#region Load Commands
+		private void Load16Immediate(ref Register reg)
 		{
-			PC.w = newVal;
-			CycleCounter += 4;
+			reg.lo = ReadPC();
+			reg.hi = ReadPC();
 		}
+		#endregion
 		#endregion
 	}
 }

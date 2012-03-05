@@ -194,20 +194,8 @@ namespace GBEmu.Emulator
 		}
 		#endregion
 		private LCDMode LCDMode;
-		private bool oamAccessAllowed
-		{
-			get
-			{
-				return (LCDMode & Emulator.LCDMode.Mode2) == 0;
-			}
-		}
-		private bool vramAccessAllowed
-		{
-			get
-			{
-				return LCDMode != LCDMode.Mode3;
-			}
-		}
+		private bool oamAccessAllowed;
+		private bool vramAccessAllowed;
 
 		private byte ScrollX;//FF43
 		private byte ScrollY;//FF42
@@ -225,6 +213,8 @@ namespace GBEmu.Emulator
 		private ARGBColor[] OBJPalette1_DMG;
 		private ARGBColor[][] ObjectPalettes;
 
+		private int TimeToNextModeChange;
+		private int SpriteCountOnCurrentLine;
 
 		#region STAT Constants
 		#region Enable Constants (OR)
@@ -630,6 +620,17 @@ namespace GBEmu.Emulator
 			}
 		}
 
+		public int GetSpriteCountOnCurrentScanline()
+		{
+			int spriteCount = 0;
+			for (int i = 0; i < SpriteTable.Length; i++)
+			{
+				if (LY >= SpriteTable[i].YOffset - 16 && LY < SpriteTable[i].YOffset) spriteCount++;
+				
+			}
+			return spriteCount;
+		}
+
 		private int DrawDMGSprites()
 		{
 			//Sprites always take their tiles from 8000-8FFF.
@@ -676,6 +677,7 @@ namespace GBEmu.Emulator
 							}
 						}
 					}
+					if (LineSpriteCount >= 10) break;
 				}
 				return LineSpriteCount;
 			}
@@ -693,57 +695,60 @@ namespace GBEmu.Emulator
 			{
 				CycleCounter += cycles;
 				ExecutedFrameCycles += cycles;
-				if (DMACounter > 0)
+				if (DMATransferRequest)
 				{
 					DMACounter -= cycles;
-					if (DMACounter <= 0) DMATransferRequest = false;
+					if (DMACounter <= 0)
+					{
+						DMACounter = 0;
+						DMATransferRequest = false;
+					}
 				}
 				#region Changing modes (need to add special case for drawing scanline 0)
 				//Modes go 2 -> 3 -> 0 -> 2 ->...0 -> 1 -> 2
 				//LY increases happen after 0, or after each line of 1.
-				switch (LCDMode)
+				if (CycleCounter >= TimeToNextModeChange)
 				{
-					case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
-						if (CycleCounter >= Mode2Cycles)
-						{
-							CycleCounter -= Mode2Cycles;
+					CycleCounter -= TimeToNextModeChange;
+					switch (LCDMode)
+					{
+						case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
 							ShiftMode(Emulator.LCDMode.Mode3);
-						}
-						break;
-					case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
-						if (CycleCounter >= Mode3Cycles)
-						{
-							CycleCounter -= Mode3Cycles;
+							break;
+						case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
 							ShiftMode(Emulator.LCDMode.Mode0);
-						}
-						break;
-					case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
-						if (CycleCounter >= Mode0Cycles)
-						{
-							CycleCounter -= Mode0Cycles;
+							if (Mode0_HBlankInterruptEnabled)
+							{
+								interruptManager.RequestInterrupt(InterruptType.LCDC);
+							}
+							break;
+						case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
+							IncrementLY();
 							if (LY >= LCDHeight)
 							{
 								ShiftMode(Emulator.LCDMode.Mode1);
+								screen.CopyData(LCDMap);
+								if (Mode1_VBlankInterruptEnabled)
+								{
+									interruptManager.RequestInterrupt(InterruptType.LCDC);
+								}
+								interruptManager.RequestInterrupt(InterruptType.VBlank);
 							}
 							else
 							{
 								ShiftMode(Emulator.LCDMode.Mode2);
 							}
-							IncrementLY();
-						}
-						break;
-					case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
-						if (CycleCounter >= LineDrawCycles)
-						{
-							CycleCounter -= LineDrawCycles;
+							
+							break;
+						case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
 							IncrementLY();
 							if (LY == 0)
 							{
 								ShiftMode(Emulator.LCDMode.Mode2);
 								ExecutedFrameCycles = 0;
 							}
-						}
-						break;
+							break;
+					}
 				}
 				#endregion
 			}
@@ -756,20 +761,26 @@ namespace GBEmu.Emulator
 			{
 				case Emulator.LCDMode.Mode0:
 					DrawDMGScanline();
-					if (Mode0_HBlankInterruptEnabled)
-					{
-						interruptManager.RequestInterrupt(InterruptType.LCDC);
-					}
+					TimeToNextModeChange = Mode0Cycles - (SpriteCountOnCurrentLine * 10);
+					oamAccessAllowed = true;
+					vramAccessAllowed = true;
 					break;
 				case Emulator.LCDMode.Mode1:
-					if (Mode1_VBlankInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
-					interruptManager.RequestInterrupt(InterruptType.VBlank);
-					screen.CopyData(LCDMap);
+					TimeToNextModeChange = LineDrawCycles;
+					oamAccessAllowed = true;
+					vramAccessAllowed = true;
 					break;
 				case Emulator.LCDMode.Mode2:
 					ReconstructOAMTableDMG();
+					SpriteCountOnCurrentLine = GetSpriteCountOnCurrentScanline();
+					TimeToNextModeChange = Mode2Cycles;
+					oamAccessAllowed = false;
+					vramAccessAllowed = true;
 					break;
 				case Emulator.LCDMode.Mode3:
+					TimeToNextModeChange = Mode3Cycles + (SpriteCountOnCurrentLine * 10);
+					oamAccessAllowed = false;
+					vramAccessAllowed = false;
 					break;
 			}
 		}
@@ -779,6 +790,11 @@ namespace GBEmu.Emulator
 			LY++;
 			if (LY >= LYLimit) LY = 0;
 			if (LY == LYCompare && LYCCoincidenceInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
+		}
+
+		public void SpeedSwitch()
+		{
+			
 		}
 	}
 }

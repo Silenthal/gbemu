@@ -127,7 +127,6 @@
     </Compile>
     <Compile Include="Emulator\MMU.cs" />
     <Compile Include="Emulator\Video.cs" />
-    <Compile Include="Assembly\Core.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

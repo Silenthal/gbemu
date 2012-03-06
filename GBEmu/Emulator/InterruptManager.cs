@@ -29,8 +29,8 @@ namespace GBEmu.Emulator
 		public byte Read(int position)
 		{
 			if (position == IntFlag) return (byte)InterruptFlag;
-			if (position == IntEnable) return (byte)InterruptEnable;
-			return 0;
+			else if (position == IntEnable) return (byte)InterruptEnable;
+			return 0xFF;
 		}
 
 		public void Write(int position, byte data)
@@ -47,7 +47,7 @@ namespace GBEmu.Emulator
 
 		public void RequestInterrupt(InterruptType intType)
 		{
-			if (InterruptMasterEnable && (InterruptEnable & intType) != 0)
+			if (InterruptMasterEnable)
 			{
 				InterruptFlag |= intType;
 			}
@@ -68,36 +68,37 @@ namespace GBEmu.Emulator
 			InterruptMasterEnable = true;
 		}
 
-		public void ClearAllInterrupts()
-		{
-			InterruptFlag = InterruptType.None;
-		}
-
 		public InterruptType FetchNextInterrupt()
 		{
+			if (!InterruptMasterEnable) return InterruptType.None;
 			if ((InterruptFlag & InterruptType.VBlank) != 0)
 			{
 				InterruptFlag ^= InterruptType.VBlank;
+				DisableInterrupts();
 				return InterruptType.VBlank;
 			}
 			else if ((InterruptFlag & InterruptType.LCDC) != 0)
 			{
 				InterruptFlag ^= InterruptType.LCDC;
+				DisableInterrupts();
 				return InterruptType.LCDC;
 			}
 			else if ((InterruptFlag & InterruptType.Timer) != 0)
 			{
 				InterruptFlag ^= InterruptType.Timer;
+				DisableInterrupts();
 				return InterruptType.Timer;
 			}
 			else if ((InterruptFlag & InterruptType.Serial) != 0)
 			{
 				InterruptFlag ^= InterruptType.Serial;
+				DisableInterrupts();
 				return InterruptType.Serial;
 			}
 			else if ((InterruptFlag & InterruptType.Joypad) != 0)
 			{
 				InterruptFlag ^= InterruptType.Joypad;
+				DisableInterrupts();
 				return InterruptType.Joypad;
 			}
 			else return InterruptType.None;

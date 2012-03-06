@@ -189,19 +189,17 @@ namespace GBEmu.Emulator
 				//Stop doesn't increment the PC, and turns off the LCD.
 				//Also, speed switch occurs after stop is used.
 				CycleCounter = 0;
-				if (interruptManager.InterruptsEnabled() && interruptManager.InterruptsReady) CheckInterrupts();
+				CheckInterrupts();
 				switch (state)
 				{
 					case CPUState.Halt:
-						//Halt increments cycles
 						CycleCounter += 4;
 						break;
 					case CPUState.Stop:
-						//Stop doesn't increment cycles, turns off LCD
 						break;
 					case CPUState.Normal:
 						byte inst = ReadPC();
-						if (RepeatLastInstruction)//Halt bug in non-CGB systems.
+						if (RepeatLastInstruction)//Halt bug
 						{
 							PC.w--;
 							RepeatLastInstruction = false;
@@ -1857,6 +1855,7 @@ namespace GBEmu.Emulator
 
 		private void CheckInterrupts()
 		{
+			if (!interruptManager.InterruptsEnabled()) return;
 			InterruptType iType = interruptManager.FetchNextInterrupt();
 			if (iType != InterruptType.None)
 			{
@@ -2188,8 +2187,9 @@ namespace GBEmu.Emulator
 		{
 			if (!interruptManager.InterruptsEnabled() && interruptManager.InterruptsReady)
 			{
-				if (mmu.IsCGB) CycleCounter += 4;
-				else RepeatLastInstruction = true;
+				//if (mmu.IsCGB) CycleCounter += 4;
+				/*else*/
+				RepeatLastInstruction = true;
 			}
 			else
 			{

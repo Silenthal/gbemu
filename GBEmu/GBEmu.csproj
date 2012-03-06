@@ -112,7 +112,6 @@
     <Compile Include="Emulator\Cartridge\MBC3.cs" />
     <Compile Include="Emulator\Cartridge\MBC5.cs" />
     <Compile Include="Emulator\Cartridge\PlainCart.cs" />
-    <Compile Include="Emulator\CommonBus.cs" />
     <Compile Include="Emulator\CPU.cs" />
     <Compile Include="Emulator\GBSystem.cs" />
     <Compile Include="Emulator\GBTimer.cs" />

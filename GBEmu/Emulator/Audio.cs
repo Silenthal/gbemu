@@ -1,20 +1,25 @@
 ﻿namespace GBEmu.Emulator
 {
-    class Audio : TimedIODevice
-    {
-        public override byte Read(int position)
-        {
-            return 0;
-        }
+	class Audio : TimedIODevice
+	{
+		public Audio()
+		{
 
-        public override void Write(int position, byte data)
-        {
-            
-        }
+		}
 
-        public override void UpdateCounter(int cycles)
-        {
-            
-        }
-    }
+		public override byte Read(int position)
+		{
+			return 0xFF;
+		}
+
+		public override void Write(int position, byte data)
+		{
+			
+		}
+
+		public override void UpdateCounter(int cycles)
+		{
+			
+		}
+	}
 }

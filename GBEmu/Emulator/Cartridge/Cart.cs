@@ -118,7 +118,6 @@ namespace GBEmu.Emulator.Cartridge
 	public abstract class Cart
 	{
 		protected byte[] romFile;
-		public byte[] ROMFile { get { return romFile; } }
 
 		public bool FileLoaded { get; protected set; }
 		protected bool RamEnabled = false;
@@ -131,7 +130,7 @@ namespace GBEmu.Emulator.Cartridge
 		protected bool RumblePresent { get { return (features & CartFeatures.Rumble) == CartFeatures.Rumble; } }
 		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
 
-		protected byte[,] CartRam = new byte[1, 0x2000]; // 0xA000 - 0xBFFF
+		protected byte[,] CartRam; // 0xA000 - 0xBFFF
 		protected byte CartRamBank = 0;
 
 		protected Cart(byte[] inFile)
@@ -178,7 +177,7 @@ namespace GBEmu.Emulator.Cartridge
 			{
 				return romFile[(RomBank * 0x4000) + position - 0x4000];
 			}
-			else if (position > 0x9FFF && position < 0xC000)
+			else if (position >= 0xA000 && position < 0xC000)
 			{
 				return CartRamRead(position);
 			}

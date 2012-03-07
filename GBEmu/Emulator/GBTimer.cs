@@ -27,7 +27,6 @@
 		{
 			interruptManager = iM;
 			CycleCounter = 0;
-			TIMACounter = 0;
 			InitializeDefaultValues();
 		}
 
@@ -35,6 +34,7 @@
 		{
 			DIV_Divider = 0;
 			TIMA_Timer = 0;
+			TIMACounter = 0;
 			TMA_TimerOverflowValue = 0;
 			TAC_TimerControl = 0;
 		}
@@ -52,7 +52,7 @@
 				case IOPorts.TAC:
 					return TAC_TimerControl;
 				default:
-					return 0;
+					return 0xFF;
 			}
 		}
 

@@ -94,17 +94,45 @@ namespace GBEmu.Emulator
 
 		private const byte LYLimit = 154;
 		#endregion
+
+		private const byte STAT_MODEFLAG = 0x03;
 		#endregion
 
 		#region Video components
 		private InterruptManager interruptManager;
 		private IRenderable screen;
 		#endregion
-		
-		public int ExecutedFrameCycles;
 
-		
+		#region LCD state and access permissions
+		private LCDMode LCDState
+		{
+			get
+			{
+				return (LCDMode)(LCDStatus & STAT_MODEFLAG);
+			}
+			set
+			{
+				LCDStatus &= 0xF8;
+				LCDStatus |= (byte)value;
+			}
+		}
+		private bool OAMAccessAllowed
+		{
+			get
+			{
+				return (LCDState == LCDMode.Mode1) || (LCDState == LCDMode.Mode0);
+			}
+		}
+		private bool VRAMAccessAllowed
+		{
+			get
+			{
+				return LCDState != LCDMode.Mode3;
+			}
+		}
+		#endregion
 
+		#region LCD control/status
 		private byte LCDControl;//FF40
 		#region LCD Control Options
 		private bool LCDEnabled
@@ -172,58 +200,56 @@ namespace GBEmu.Emulator
 			}
 		}
 		#endregion
-		private byte stat;
-		public byte LCDStatus
-		{
-			get
-			{
-				return (byte)(stat | LYCoincidence | (byte)LCDMode);
-			}
-			set
-			{
-				stat = (byte)(value & 0x78);
-			}
-		}//FF41
+		private byte LCDStatus;//FF41
 		#region LCD Status options
-		private bool LYCCoincidenceInterruptEnabled
+		private bool LYCoincidenceInterruptEnabled
 		{
 			get
 			{
 				return (LCDStatus & STAT_LYC_LY_INTERRUPT_FLAG) != 0;
 			}
-		}
+		}//Bit 7
 		private bool Mode2_OAMInterruptEnabled
 		{
 			get
 			{
 				return (LCDStatus & STAT_MODE2_OAM_INTERRUPT) != 0;
 			}
-		}
+		}//Bit 6
 		private bool Mode1_VBlankInterruptEnabled
 		{
 			get
 			{
 				return (LCDStatus & STAT_MODE1_VBLANK_INTERRUPT) != 0;
 			}
-		}
+		}//Bit 5
 		private bool Mode0_HBlankInterruptEnabled
 		{
 			get
 			{
 				return (LCDStatus & STAT_MODE0_HBLANK_INTERRUPT) != 0;
 			}
-		}
-		private byte LYCoincidence
+		}//Bit 4
+		private bool LYCoincidence
 		{
+			set
+			{
+				if (value)
+				{
+					LCDStatus |= STAT_COINCIDENCE_FLAG;
+				}
+				else
+				{
+					LCDStatus &= STAT_COINCIDENCE_FLAG_OFF;
+				}
+			}
 			get
 			{
-				return LY == LYCompare ? (byte)0x4 : (byte)0;
+				return (LCDStatus & STAT_COINCIDENCE_FLAG) != 0;
 			}
-		}
+		}//Bit 3
 		#endregion
-		private LCDMode LCDMode;
-		private bool oamAccessAllowed;
-		private bool vramAccessAllowed;
+		#endregion
 
 		#region Scroll
 		private byte ScrollY;//FF42
@@ -250,6 +276,7 @@ namespace GBEmu.Emulator
 		private byte WindowX;//FF4B
 		#endregion
 
+		public int ExecutedFrameCycles;
 		private int TimeToNextModeChange;
 		private int SpriteCountOnCurrentLine;
 
@@ -259,7 +286,11 @@ namespace GBEmu.Emulator
 		private const byte STAT_MODE2_OAM_INTERRUPT = 0x20;
 		private const byte STAT_MODE1_VBLANK_INTERRUPT = 0x10;
 		private const byte STAT_MODE0_HBLANK_INTERRUPT = 0x08;
-		private const byte STAT_COINCIDENCE_UNEQUAL = 0x04;
+		private const byte STAT_COINCIDENCE_FLAG = 0x04;
+		#endregion
+
+		#region Disable Constants (AND)
+		private const byte STAT_COINCIDENCE_FLAG_OFF = 0xFB;
 		#endregion
 		#endregion
 
@@ -289,16 +320,17 @@ namespace GBEmu.Emulator
 			ExecutedFrameCycles = 0;
 			screen = newScreen;
 			interruptManager = iM;
-			InitializeLCD();
 			InitializeVideoMemory();
 			InitializePalettes();
+			InitializeLCD();
 			LCDScreenOn = true;
+			ShiftMode(LCDMode.Mode2);
 		}
 
+		#region Initialization
 		private void InitializeLCD()
 		{
 			LCDMap = new int[LCDArraySize];
-			LCDMode = LCDMode.Mode2;
 			LCDControl = 0x91;
 			ScrollX = 0x00;
 			ScrollY = 0x00;
@@ -329,6 +361,7 @@ namespace GBEmu.Emulator
 			UpdateObjectPalette0();
 			UpdateObjectPalette1();
 		}
+		#endregion
 
 		#region Reads
 		public override byte Read(int position)
@@ -377,7 +410,7 @@ namespace GBEmu.Emulator
 
 		private byte VRAMRead(int position)
 		{
-			if (position >= 0x8000 && position < 0xA000 && ((LCDScreenOn && vramAccessAllowed) || !LCDScreenOn))
+			if (position >= 0x8000 && position < 0xA000 && ((LCDScreenOn && VRAMAccessAllowed) || !LCDScreenOn))
 			{
 				return VRAM[position - 0x8000];
 			}
@@ -386,7 +419,7 @@ namespace GBEmu.Emulator
 
 		private byte OAMRead(int position)
 		{
-			if (position >= 0xFE00 && position < 0xFEA0 & ((LCDScreenOn && oamAccessAllowed) || !LCDScreenOn))
+			if (position >= 0xFE00 && position < 0xFEA0 & ((LCDScreenOn && OAMAccessAllowed) || !LCDScreenOn))
 			{
 				return OAM[position - 0xFE00];
 			}
@@ -416,7 +449,7 @@ namespace GBEmu.Emulator
 						else TurnOnLCD();
 						break;
 					case IOPorts.STAT:
-						LCDStatus = data;
+						LCDStatus |= (byte)(data & 0x78);
 						break;
 					case IOPorts.SCX:
 						ScrollX = data;
@@ -458,7 +491,7 @@ namespace GBEmu.Emulator
 		{
 			if (position >= 0x8000 && position < 0xA000)
 			{
-				if ((LCDScreenOn && vramAccessAllowed) || !LCDScreenOn)
+				if ((LCDScreenOn && VRAMAccessAllowed) || !LCDScreenOn)
 				{
 					VRAM[position - 0x8000] = data;
 				}
@@ -467,7 +500,7 @@ namespace GBEmu.Emulator
 
 		private void OAMWrite(int position, byte data)
 		{
-			if ((LCDScreenOn && oamAccessAllowed) || !LCDScreenOn)
+			if ((LCDScreenOn && OAMAccessAllowed) || !LCDScreenOn)
 			{
 				OAM[position - 0xFE00] = data;
 			}
@@ -497,43 +530,53 @@ namespace GBEmu.Emulator
 		{
 			LY++;
 			if (LY >= LYLimit) LY = 0;
-			if (LY == LYCompare && LYCCoincidenceInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
+			if (LY == LYCompare)
+			{
+				LYCoincidence = true;
+				if (LYCoincidenceInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
+			}
 		}
 
 		private void ResetLY()
 		{
 			CycleCounter = 0;
 			LY = 0;
-			LCDMode = LCDMode.Mode2;
+			ShiftMode(LCDMode.Mode2);
 		}
 
 		private void ShiftMode(LCDMode newMode)
 		{
-			LCDMode = newMode;
+			LCDState = newMode;
 			switch (newMode)
 			{
-				case Emulator.LCDMode.Mode0:
+				case Emulator.LCDMode.Mode0://HBlank
 					DrawScanline();
 					TimeToNextModeChange = Mode0Cycles - (SpriteCountOnCurrentLine * 10);
-					oamAccessAllowed = true;
-					vramAccessAllowed = true;
+					if (Mode0_HBlankInterruptEnabled)
+					{
+						interruptManager.RequestInterrupt(InterruptType.LCDC);
+					}
 					break;
-				case Emulator.LCDMode.Mode1:
+				case Emulator.LCDMode.Mode1://VBlank
 					TimeToNextModeChange = LineDrawCycles;
-					oamAccessAllowed = true;
-					vramAccessAllowed = true;
+					if (LY == LCDHeight)
+					{
+						if (Mode1_VBlankInterruptEnabled)
+						{
+							interruptManager.RequestInterrupt(InterruptType.LCDC);
+						}
+						interruptManager.RequestInterrupt(InterruptType.VBlank);
+						screen.CopyData(LCDMap);
+					}
 					break;
-				case Emulator.LCDMode.Mode2:
-					ReconstructOAMTableDMG();
+				case Emulator.LCDMode.Mode2://Searching OAM
+					ReconstructOAMTable();
 					SpriteCountOnCurrentLine = GetSpriteCountOnCurrentScanline();
 					TimeToNextModeChange = Mode2Cycles;
-					oamAccessAllowed = false;
-					vramAccessAllowed = true;
+					if (Mode2_OAMInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
 					break;
-				case Emulator.LCDMode.Mode3:
+				case Emulator.LCDMode.Mode3://Searching OAM + VRAM
 					TimeToNextModeChange = Mode3Cycles + (SpriteCountOnCurrentLine * 10);
-					oamAccessAllowed = false;
-					vramAccessAllowed = false;
 					break;
 			}
 		}
@@ -685,6 +728,17 @@ namespace GBEmu.Emulator
 			else return 0;
 		}
 
+		private void FetchTileLineFromTile(int position, int lineNum, int[] outArr, bool XFlip, bool YFlip)
+		{
+			int pos = position + (YFlip ? ((7 - lineNum) * 2) : (lineNum * 2));
+			for (int i = 0; i < TileWidth; i++)
+			{
+				int plane0 = VRAM[pos + 0] >> (XFlip ? i : (7 - i));
+				int plane1 = VRAM[pos + 1] >> (XFlip ? i : (7 - i));
+				outArr[i] = plane0 + (plane1 * 2);
+			}
+		}
+
 		private int GetSpriteCountOnCurrentScanline()
 		{
 			int spriteCount = 0;
@@ -694,6 +748,31 @@ namespace GBEmu.Emulator
 
 			}
 			return spriteCount;
+		}
+
+		public void ReconstructOAMTable()
+		{
+			for (int i = 0; i < SpriteInfoTable.Length; i++)
+			{
+				SpriteInfoTable[i] = new SpriteInfo()
+				{
+					OAMIndex = i * SpriteInfoSize,
+					YOffset = OAM[(i * SpriteInfoSize) + 0],
+					XOffset = OAM[(i * SpriteInfoSize) + 1],
+					TileIndex = OAM[(i * SpriteInfoSize) + 2],
+					SpriteProperties = OAM[(i * SpriteInfoSize) + 3]
+				};
+				//-Sprites are sorted by their X position. In the case that their Xs are equal,
+				//-the one with the lower OAM position takes priority.
+				int x = i;
+				while (x > 0 && (SpriteInfoTable[x] < SpriteInfoTable[x - 1]))
+				{
+					SpriteInfo temp = SpriteInfoTable[x - 1];
+					SpriteInfoTable[x - 1] = SpriteInfoTable[x];
+					SpriteInfoTable[x] = temp;
+					x--;
+				}
+			}
 		}
 		#endregion
 
@@ -709,42 +788,6 @@ namespace GBEmu.Emulator
 		}
 		#endregion
 
-		private void FetchTileLineFromTile(int position, int lineNum, int[] outArr, bool XFlip, bool YFlip)
-		{
-			int pos = position + (YFlip ? ((7 - lineNum) * 2) : (lineNum * 2));
-			for (int i = 0; i < TileWidth; i++)
-			{
-				int plane0 = VRAM[pos + 0] >> (XFlip ? i : (7 - i));
-				int plane1 = VRAM[pos + 1] >> (XFlip ? i : (7 - i));
-				outArr[i] = plane0 + (plane1 * 2);
-			}
-		}
-
-		public void ReconstructOAMTableDMG()
-		{
-			for (int i = 0; i < SpriteInfoTable.Length; i++)
-			{
-				SpriteInfoTable[i] = new SpriteInfo()
-				{
-					OAMIndex			= i * SpriteInfoSize,
-					YOffset				= OAM[(i * SpriteInfoSize) + 0],
-					XOffset				= OAM[(i * SpriteInfoSize) + 1],
-					TileIndex			= OAM[(i * SpriteInfoSize) + 2],
-					SpriteProperties	= OAM[(i * SpriteInfoSize) + 3]
-				};
-				//-Sprites are sorted by their X position. In the case that their Xs are equal,
-				//-the one with the lower OAM position takes priority.
-				int x = i;
-				while (x > 0 && (SpriteInfoTable[x] < SpriteInfoTable[x - 1]))
-				{
-					SpriteInfo temp = SpriteInfoTable[x - 1];
-					SpriteInfoTable[x - 1] = SpriteInfoTable[x];
-					SpriteInfoTable[x] = temp;
-					x--;
-				}
-			}
-		}
-		
 		public override void UpdateCounter(int cycles)
 		{
 			if (LCDScreenOn)
@@ -757,39 +800,32 @@ namespace GBEmu.Emulator
 				if (CycleCounter >= TimeToNextModeChange)
 				{
 					CycleCounter -= TimeToNextModeChange;
-					switch (LCDMode)
+					switch (LCDState)
 					{
 						case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
 							ShiftMode(Emulator.LCDMode.Mode3);
 							break;
 						case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
 							ShiftMode(Emulator.LCDMode.Mode0);
-							if (Mode0_HBlankInterruptEnabled)
-							{
-								interruptManager.RequestInterrupt(InterruptType.LCDC);
-							}
 							break;
 						case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
 							IncrementLY();
 							if (LY >= LCDHeight)
 							{
 								ShiftMode(Emulator.LCDMode.Mode1);
-								screen.CopyData(LCDMap);
-								if (Mode1_VBlankInterruptEnabled)
-								{
-									interruptManager.RequestInterrupt(InterruptType.LCDC);
-								}
-								interruptManager.RequestInterrupt(InterruptType.VBlank);
 							}
 							else
 							{
 								ShiftMode(Emulator.LCDMode.Mode2);
 							}
-							
 							break;
 						case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
 							IncrementLY();
-							if (LY == 0)
+							if (LY != 0)
+							{
+								ShiftMode(LCDMode.Mode1);
+							}
+							else
 							{
 								ShiftMode(Emulator.LCDMode.Mode2);
 								ExecutedFrameCycles = 0;

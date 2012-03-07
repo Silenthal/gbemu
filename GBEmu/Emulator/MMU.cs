@@ -132,7 +132,7 @@ namespace GBEmu.Emulator
 		{
 			if (position >= 0xC000 && position < 0xE000)
 			{
-				return internalWRAM[position - 0xE000];
+				return internalWRAM[position - 0xC000];
 			}
 			else return 0xFF;
 		}
@@ -250,7 +250,7 @@ namespace GBEmu.Emulator
 		{
 			if (position >= 0xC000 && position < 0xE000)
 			{
-				internalWRAM[position - 0xE000] = value;
+				internalWRAM[position - 0xC000] = value;
 			}
 		}
 
@@ -268,7 +268,7 @@ namespace GBEmu.Emulator
 			int startAddress = transferDetails << 8;
 			for (int i = 0; i < 0xA0; i++)
 			{
-				Write(0xFF00 + i, Read(startAddress + i));
+				Write(0xFE00 + i, Read(startAddress + i));
 			}
 		}
 

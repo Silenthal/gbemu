@@ -219,42 +219,37 @@ namespace GBEmu.Emulator
 								Inc16(ref BC.w);
 								break;
 							case 0x04://inc b
-								Inc(ref BC.hi);
+								Inc8(ref BC.hi);
 								break;
 							case 0x05://dec b
-								Dec(ref BC.hi);
+								Dec8(ref BC.hi);
 								break;
 							case 0x06://ld b,nn
-								BC.hi = ReadPC();
+								LoadImmediate(ref BC.hi);
 								break;
 							case 0x07://rlca
 								RLC(ref AF.hi);
 								break;
 							case 0x08://ld [nnnn],sp
-								Register address = new Register();
-								address.lo = ReadPC();
-								address.hi = ReadPC();
-								Write(address.w, SP.lo);
-								address.w++;
-								Write(address.w, SP.hi);
+								WriteWord(ReadPCWord(), SP.w);
 								break;
 							case 0x09://add hl,bc
 								AddHL(BC.w);
 								break;
 							case 0x0A://ld a,[bc]
-								AF.hi = Read(BC.w);
+								LoadFromMemory(ref AF.hi, BC.w);
 								break;
 							case 0x0B://dec bc
 								Dec16(ref BC.w);
 								break;
 							case 0x0C://inc c
-								Inc(ref BC.lo);
+								Inc8(ref BC.lo);
 								break;
 							case 0x0D://dec c
-								Dec(ref BC.lo);
+								Dec8(ref BC.lo);
 								break;
 							case 0x0E://ld c,nn
-								BC.lo = ReadPC();
+								LoadImmediate(ref BC.lo);
 								break;
 							case 0x0F://rrca
 								RRC(ref AF.hi);
@@ -274,13 +269,13 @@ namespace GBEmu.Emulator
 								Inc16(ref DE.w);
 								break;
 							case 0x14://inc d
-								Inc(ref DE.hi);
+								Inc8(ref DE.hi);
 								break;
 							case 0x15://dec d
-								Dec(ref DE.hi);
+								Dec8(ref DE.hi);
 								break;
 							case 0x16://ld d,nn
-								DE.hi = ReadPC();
+								LoadImmediate(ref DE.hi);
 								break;
 							case 0x17://rla
 								RL(ref AF.hi);
@@ -292,19 +287,19 @@ namespace GBEmu.Emulator
 								AddHL(DE.w);
 								break;
 							case 0x1A://ld a,[de]
-								AF.hi = Read(DE.w);
+								LoadFromMemory(ref AF.hi, DE.w);
 								break;
 							case 0x1B://dec de
 								Dec16(ref DE.w);
 								break;
 							case 0x1C://inc e
-								Inc(ref DE.lo);
+								Inc8(ref DE.lo);
 								break;
 							case 0x1D://dec e
-								Dec(ref DE.lo);
+								Dec8(ref DE.lo);
 								break;
 							case 0x1E://ld e,nn
-								DE.lo = ReadPC();
+								LoadImmediate(ref DE.lo);
 								break;
 							case 0x1F://rra
 								RR(ref AF.hi);
@@ -318,36 +313,22 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref HL);
 								break;
 							case 0x22://ldi [hl],a
-								Write(HL.w, AF.hi);
-								HL.w++;
+								LoadHL(AF.hi, LoadHLType.Inc);
 								break;
 							case 0x23://inc hl
 								Inc16(ref HL.w);
 								break;
 							case 0x24://inc h
-								Inc(ref HL.hi);
+								Inc8(ref HL.hi);
 								break;
 							case 0x25://dec h
-								Dec(ref HL.hi);
+								Dec8(ref HL.hi);
 								break;
 							case 0x26://ld h,nn
-								HL.hi = ReadPC();
+								LoadImmediate(ref HL.hi);
 								break;
 							case 0x27://daa
-								IsZero = AF.hi == 0;
-								int correct = IsCarry ? 0x60 : 0x00;
-								if (IsHalfCarry) correct |= 0x06;
-								if (!(IsNegativeOp))
-								{
-									if ((AF.hi & 0x0F) > 0x09) correct |= 0x06;
-									if (AF.hi > 0x99) correct |= 0x60;
-									AF.hi += (byte)correct;
-								}
-								else
-								{
-									AF.hi -= (byte)correct;
-								}
-								IsCarry = ((correct << 2) & 0x100) != 0;
+								DecimalAdjustA();
 								break;
 							case 0x28://jr z,nn
 								JumpRelative(IsZero);
@@ -363,18 +344,16 @@ namespace GBEmu.Emulator
 								Dec16(ref HL.w);
 								break;
 							case 0x2C://inc l
-								Inc(ref HL.lo);
+								Inc8(ref HL.lo);
 								break;
 							case 0x2D://dec l
-								Dec(ref HL.lo);
+								Dec8(ref HL.lo);
 								break;
 							case 0x2E://ld l,nn
-								HL.lo = ReadPC();
+								LoadImmediate(ref HL.lo);
 								break;
 							case 0x2F://cpl
-								IsNegativeOp = true;
-								IsHalfCarry = true;
-								AF.hi ^= 0xFF;
+								CPL();
 								break;
 							#endregion
 							#region Ops 0x30-0x3F
@@ -385,24 +364,19 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref SP);
 								break;
 							case 0x32://ldd [hl],a
-								Write(HL.w, AF.hi);
-								HL.w--;
+								LoadHL(AF.hi, LoadHLType.Dec);
 								break;
 							case 0x33://inc sp
 								Inc16(ref SP.w);
 								break;
 							case 0x34://inc [hl]
-								byte incHL = Read(HL.w);
-								incHL++;
-								Write(HL.w, incHL);
+								IncHL();
 								break;
 							case 0x35://dec [hl]
-								byte decHL = Read(HL.w);
-								decHL--;
-								Write(HL.w, decHL);
+								DecHL();
 								break;
 							case 0x36://ld [hl],nn
-								Write(HL.w, ReadPC());
+								LoadHL(ReadPC(), LoadHLType.None);
 								break;
 							case 0x37://scf
 								SCF();
@@ -421,13 +395,13 @@ namespace GBEmu.Emulator
 								Dec16(ref SP.w);
 								break;
 							case 0x3C://inc a
-								Inc(ref AF.hi);
+								Inc8(ref AF.hi);
 								break;
 							case 0x3D://dec a
-								Dec(ref AF.hi);
+								Dec8(ref AF.hi);
 								break;
 							case 0x3E://ld a,nn
-								AF.hi = ReadPC();
+								LoadImmediate(ref AF.hi);
 								break;
 							case 0x3F://ccf
 								CCF();
@@ -958,8 +932,7 @@ namespace GBEmu.Emulator
 								break;
 							case 0xEA://ld [$nnnn],a
 								Register temp = new Register();
-								temp.lo = ReadPC();
-								temp.hi = ReadPC();
+								Load16Immediate(ref temp);
 								Write(temp.w, AF.hi);
 								break;
 							case 0xEB://--
@@ -982,9 +955,7 @@ namespace GBEmu.Emulator
 								AF.hi = Read(nnAddress);
 								break;
 							case 0xF1://pop af
-								Register tempPop = new Register();
-								Pop(ref tempPop.w);
-								AF = tempPop;
+								Pop(ref AF.w);
 								break;
 							case 0xF2://ld a,[c]
 								ushort ldrcaddress = 0xFF00;
@@ -1014,8 +985,7 @@ namespace GBEmu.Emulator
 								break;
 							case 0xFA://ld a,[nnnn]
 								Register tempLoc = new Register();
-								tempLoc.lo = ReadPC();
-								tempLoc.hi = ReadPC();
+								Load16Immediate(ref tempLoc);
 								AF.hi = Read(tempLoc.w);
 								break;
 							case 0xFB://ei
@@ -1891,6 +1861,19 @@ namespace GBEmu.Emulator
 			CycleCounter += 4;
 			return mmu.Read(src);
 		}
+		private ushort ReadWord(ushort src)
+		{
+			ushort ret = Read(src);
+			src++;
+			ret |= (ushort)(Read(src) << 8);
+			return ret;
+		}
+		private ushort ReadPCWord()
+		{
+			ushort ret = ReadPC();
+			ret |= (ushort)(ReadPC() << 8);
+			return ret;
+		}
 		private byte ReadPC()
 		{
 			byte read = Read(PC.w);
@@ -1908,6 +1891,12 @@ namespace GBEmu.Emulator
 			CycleCounter += 4;
 			mmu.Write(dest, data);
 		}
+		private void WriteWord(ushort dest, ushort data)
+		{
+			Write(dest, (byte)data);
+			dest++;
+			Write(dest, (byte)(data >> 8));
+		}
 		private void PCChange(ushort newVal)
 		{
 			PC.w = newVal;
@@ -1917,7 +1906,7 @@ namespace GBEmu.Emulator
 
 		#region Instruction Implementation
 		#region 8-bit Arithmetic
-		private void Inc(ref byte refreg)
+		private void Inc8(ref byte refreg)
 		{
 			int temp = refreg + 1;
 			int tempover = refreg ^ 1 ^ temp;
@@ -1926,7 +1915,7 @@ namespace GBEmu.Emulator
 			refreg++;
 			IsZero = (refreg == 0);
 		}
-		private void Dec(ref byte refreg)
+		private void Dec8(ref byte refreg)
 		{
 			int temp = refreg - 1;
 			int tempover = refreg ^ 0xFF ^ temp;
@@ -1934,6 +1923,18 @@ namespace GBEmu.Emulator
 			IsNegativeOp = true;
 			refreg--;
 			IsZero = (refreg == 0);
+		}
+		private void IncHL()
+		{
+			byte incHL = Read(HL.w);
+			incHL++;
+			Write(HL.w, incHL);
+		}
+		private void DecHL()
+		{
+			byte decHL = Read(HL.w);
+			decHL--;
+			Write(HL.w, decHL);
 		}
 		private void AddA(byte add, bool addCarry)
 		{
@@ -1990,6 +1991,29 @@ namespace GBEmu.Emulator
 			IsCarry = (tempX & 0x100) != 0;
 			IsZero = (temp & 0xFF) == 0;
 		}
+		private void DecimalAdjustA()
+		{
+			byte correction = (byte)(IsCarry ? 0x60 : 0x00);
+			if (IsHalfCarry) correction |= 0x06;
+			if (!IsNegativeOp)
+			{
+				if ((AF.hi & 0x0F) > 0x09) correction |= 0x06;
+				if (AF.hi > 0x99) correction |= 0x60;
+				AF.hi += correction;
+			}
+			else
+			{
+				AF.hi -= correction;
+			}
+			IsCarry = ((correction << 2) & 0x100) != 0;
+			IsZero = AF.hi == 0;
+		}
+		private void CPL()
+		{
+			IsNegativeOp = true;
+			IsHalfCarry = true;
+			AF.hi ^= 0xFF;
+		}
 		#endregion
 
 		#region 16-bit Arithmetic
@@ -2027,7 +2051,6 @@ namespace GBEmu.Emulator
 		private void LdHLSPN()
 		{
 			sbyte offHL = (sbyte)ReadPC();
-			ushort tempxxx = SP.w;
 			int tempAHL = SP.w + offHL;
 			int tempAHX = SP.w ^ offHL ^ tempAHL;
 			IsHalfCarry = (tempAHX & 0x1000) != 0;
@@ -2162,6 +2185,7 @@ namespace GBEmu.Emulator
 			ushort retAddr = 0;
 			Pop(ref retAddr);
 			PCChange(retAddr);
+			state = CPUState.Normal;
 			if (enableInterrupts) interruptManager.EnableInterrupts();
 		}
 		private void CheckedReturn(bool isCondTrue)
@@ -2176,31 +2200,29 @@ namespace GBEmu.Emulator
 		}
 		private void RST(byte jumpVector)
 		{
-			ushort jumpLoc = (ushort)(jumpVector & 0x38);
 			Push(PC.w);
-			PCChange(jumpLoc);
+			PCChange((ushort)(jumpVector & 0x38));
 		}
 		#endregion
 
 		#region CPU Commands
 		private void Halt()
 		{
-			if (!interruptManager.InterruptsEnabled() && interruptManager.InterruptsReady)
+			if (interruptManager.InterruptsEnabled())
+			{
+				state = CPUState.Halt;
+			}
+			else if (interruptManager.InterruptsReady)
 			{
 				//if (mmu.IsCGB) CycleCounter += 4;
 				/*else*/
 				RepeatLastInstruction = true;
-			}
-			else
-			{
-				state = CPUState.Halt;
 			}
 		}
 		private void Stop()
 		{
 			state = CPUState.Stop;
 			PC.w++;
-			//mmu.Stop();
 		}
 		private void DI()
 		{
@@ -2241,11 +2263,26 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region Load Commands
+		private void LoadImmediate(ref byte reg)
+		{
+			reg = ReadPC();
+		}
+		private void LoadFromMemory(ref byte reg, ushort dest)
+		{
+			reg = Read(dest);
+		}
 		private void Load16Immediate(ref Register reg)
 		{
 			reg.lo = ReadPC();
 			reg.hi = ReadPC();
 		}
+		private void LoadHL(byte val, LoadHLType type)
+		{
+			Write(HL.w, val);
+			if (type == LoadHLType.Inc) HL.w++;
+			else if (type == LoadHLType.Dec) HL.w--;
+		}
+		private enum LoadHLType { None, Inc, Dec }
 		#endregion
 		#endregion
 	}

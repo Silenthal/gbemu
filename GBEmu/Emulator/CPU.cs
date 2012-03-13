@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace GBEmu.Emulator
 {
@@ -13,14 +12,14 @@ namespace GBEmu.Emulator
 		[FieldOffset(1)]
 		public byte hi;
 	}
-	public enum CPUState { Normal, Halt, Stop }
+	public enum CPUState { Normal, Halt }
 	class CPU
 	{
 		//public const UInt32 DMGCycles = 4194304;
 		//public const UInt32 CGB_SingleCycles = 4194300;
 		//public const UInt32 SGB_Cycles = 4295454;
 		//public const UInt32 CGB_DoubleCycles = 8338000;
-		//public const int DMA_CYCLE = 670;
+		//public const UInt32 DMA_CYCLE = 670;
 
 		public CPUState state;
 
@@ -41,91 +40,77 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (AF.w & FLAG_ZERO_ON) != 0;
+				return (AF.w & 0x80) != 0;
 			}
 			set
 			{
 				if (value)
 				{
-					AF.lo |= FLAG_ZERO_ON;
+					AF.lo |= 0x80;
 				}
 				else
 				{
-					AF.lo &= FLAG_ZERO_OFF;
+					AF.lo &= 0x7F;
 				}
 			}
-		}
-		private bool IsHalfCarry
-		{
-			get
-			{
-				return (AF.w & FLAG_HALF_CARRY_ON) != 0;
-			}
-			set
-			{
-				if (value)
-				{
-					AF.lo |= FLAG_HALF_CARRY_ON;
-				}
-				else
-				{
-					AF.lo &= FLAG_HALF_CARRY_OFF;
-				}
-			}
-		}
-		private bool IsCarry
-		{
-			get
-			{
-				return (AF.w & FLAG_CARRY_ON) != 0;
-			}
-			set
-			{
-				if (value)
-				{
-					AF.lo |= FLAG_CARRY_ON;
-				}
-				else
-				{
-					AF.lo &= FLAG_CARRY_OFF;
-				}
-			}
-		}
+		}//Bit 7
 		private bool IsNegativeOp
 		{
 			get
 			{
-				return (AF.w & FLAG_NEGATIVE_ON) != 0;
+				return (AF.w & 0x40) != 0;
 			}
 			set
 			{
 				if (value)
 				{
-					AF.lo |= FLAG_NEGATIVE_ON;
+					AF.lo |= 0x40;
 				}
 				else
 				{
-					AF.lo &= FLAG_NEGATIVE_OFF;
+					AF.lo &= 0xBF;
 				}
 			}
-		}
+		}//Bit 6
+		private bool IsHalfCarry
+		{
+			get
+			{
+				return (AF.w & 0x20) != 0;
+			}
+			set
+			{
+				if (value)
+				{
+					AF.lo |= 0x20;
+				}
+				else
+				{
+					AF.lo &= 0xDF;
+				}
+			}
+		}//Bit 5
+		private bool IsCarry
+		{
+			get
+			{
+				return (AF.w & 0x10) != 0;
+			}
+			set
+			{
+				if (value)
+				{
+					AF.lo |= 0x10;
+				}
+				else
+				{
+					AF.lo &= 0xEF;
+				}
+			}
+		}//Bit 4
 		#endregion
 
-		#region Flag Constants
-		#region Enable Constants (OR)
-		private const byte FLAG_ZERO_ON = 0x80;
-		private const byte FLAG_NEGATIVE_ON = 0x40;
-		private const byte FLAG_HALF_CARRY_ON = 0x20;
-		private const byte FLAG_CARRY_ON = 0x10;
-		#endregion
-
-		#region Disable Constants (AND)
-		private const byte FLAG_ZERO_OFF = 0x7F;
-		private const byte FLAG_NEGATIVE_OFF = 0xBF;
-		private const byte FLAG_HALF_CARRY_OFF = 0xDF;
-		private const byte FLAG_CARRY_OFF = 0xEF;
-		#endregion
-
+		#region Bit Constants
 		#region Set
 		private const byte SET_7 = 0x80;
 		private const byte SET_6 = 0x40;
@@ -194,8 +179,6 @@ namespace GBEmu.Emulator
 				{
 					case CPUState.Halt:
 						CycleCounter += 4;
-						break;
-					case CPUState.Stop:
 						break;
 					case CPUState.Normal:
 						byte inst = ReadPC();
@@ -2221,7 +2204,7 @@ namespace GBEmu.Emulator
 		}
 		private void Stop()
 		{
-			state = CPUState.Stop;
+			//state = CPUState.Stop;
 			PC.w++;
 		}
 		private void DI()

@@ -2,7 +2,7 @@
 {
 	interface IRenderable
 	{
-		void CopyData(int[] newData);
+		void CopyData(Microsoft.Xna.Framework.Color[] newData);
 		void RenderFrame();
 	}
 }

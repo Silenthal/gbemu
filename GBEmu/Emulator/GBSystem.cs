@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
-using GBEmu.Render.Gdi;
 using GBEmu.Render;
 
 namespace GBEmu.Emulator

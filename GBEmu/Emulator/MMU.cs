@@ -14,12 +14,10 @@ namespace GBEmu.Emulator
 		private InterruptManager interruptManager;
 		#endregion
 
-		private byte[] internalWRAM;
+		private byte[] internalWRAM;//C000-DFFF
 
 		private byte[] HRAM; //FF80 - FFFE
 		
-		//public const int DMA_CYCLE = 670;
-
 		public MMU(byte[] inFile, InterruptManager iM, GBEmu.Render.IRenderable screen)
 		{
 			interruptManager = iM;
@@ -29,10 +27,10 @@ namespace GBEmu.Emulator
 			LCD = new Video(interruptManager, screen);
 			serial = new Serial();
 			audio = new Audio();
-			initializeInternalAndHRAM();
+			InitializeInternalAndHRAM();
 		}
 
-		public void initializeInternalAndHRAM()
+		public void InitializeInternalAndHRAM()
 		{
 			internalWRAM = new byte[0x2000];
 			HRAM = new byte[0x7F];

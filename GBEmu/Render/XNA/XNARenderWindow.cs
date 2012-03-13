@@ -6,8 +6,8 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using XNAColor = Microsoft.Xna.Framework.Color;
-using GDIColor = System.Drawing.Color;
+using XnaColor = Microsoft.Xna.Framework.Color;
+using GdiColor = System.Drawing.Color;
 
 
 namespace GBEmu.Render.XNA
@@ -26,16 +26,16 @@ namespace GBEmu.Render.XNA
 
 		protected override void Draw()
 		{
-			GraphicsDevice.Clear(XNAColor.CornflowerBlue);
+			GraphicsDevice.Clear(XnaColor.CornflowerBlue);
 			spriteBatch.Begin(SpriteSortMode.Immediate, null);
 			spriteBatch.Draw(canvas, GraphicsDevice.Viewport.Bounds, canvas.Bounds, Color.White);
 			spriteBatch.End();
 			GraphicsDevice.Textures[0] = null;
 		}
 
-		public void CopyData(int[] newData)
+		public void CopyData(XnaColor[] newData)
 		{
-			canvas.SetData<int>(newData);
+			canvas.SetData<XnaColor>(newData);
 		}
 
 		public void RenderFrame()

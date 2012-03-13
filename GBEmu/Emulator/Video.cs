@@ -1,36 +1,16 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using GBEmu.Render;
-using System.Runtime.InteropServices;
+﻿using GBEmu.Render;
+using XnaColor = Microsoft.Xna.Framework.Color;
 
 namespace GBEmu.Emulator
 {
-	[StructLayout(LayoutKind.Explicit)]
-	public struct ARGBColor
-	{
-		[FieldOffset(0)]
-		public int ARGBVal;
-		[FieldOffset(0)]
-		public byte Red;
-		[FieldOffset(1)]
-		public byte Green;
-		[FieldOffset(2)]
-		public byte Blue;
-		[FieldOffset(3)]
-		public byte Alpha;
-	}
-
 	public class DMGPredefColor
 	{
-		public static ARGBColor Transparent = new ARGBColor { Alpha = 0 };
-		public static ARGBColor White = new ARGBColor() { Red = 0xFF, Green = 0xFF, Blue = 0xFF, Alpha = 0xFF };
-		public static ARGBColor LightGrey = new ARGBColor() { Red = 0xAA, Green = 0xAA, Blue = 0xAA, Alpha = 0xFF };
-		public static ARGBColor DarkGrey = new ARGBColor() { Red = 0x55, Green = 0x55, Blue = 0x55, Alpha = 0xFF };
-		public static ARGBColor Black = new ARGBColor() { Red = 0x00, Green = 0x00, Blue = 0x00, Alpha = 0xFF };
-		public static ARGBColor[] Colors = { White, LightGrey, DarkGrey, Black };
+		public static XnaColor Transparent = new XnaColor { A = 0 };
+		public static XnaColor White = XnaColor.White;
+		public static XnaColor LightGrey = XnaColor.LightGray;
+		public static XnaColor DarkGrey = XnaColor.DarkGray;
+		public static XnaColor Black = XnaColor.Black;
+		public static XnaColor[] Colors = { White, LightGrey, DarkGrey, Black };
 	}
 
 	public struct SpriteInfo
@@ -46,6 +26,48 @@ namespace GBEmu.Emulator
 		public int YOffset;
 		public int TileIndex;
 		public int SpriteProperties;
+		public bool XFlip
+		{
+			get
+			{
+				return (SpriteProperties & 0x20) != 0;
+			}
+		}
+		public bool YFlip
+		{
+			get
+			{
+				return (SpriteProperties & 0x40) != 0;
+			}
+		}
+		public int VRAMBank
+		{
+			get
+			{
+				return (SpriteProperties >> 3) & 1;
+			}
+		}
+		public int CGBPaletteNumber
+		{
+			get
+			{
+				return SpriteProperties & 0x7;
+			}
+		}
+		public int DMGObjectPaletteNum
+		{
+			get
+			{
+				return (SpriteProperties >> 4) & 1;
+			}
+		}
+		public bool PriorityOverBG
+		{
+			get
+			{
+				return (SpriteProperties & 0x80) == 0;
+			}
+		}
 		public static bool operator <(SpriteInfo left, SpriteInfo right)
 		{
 			return left.XOffset != right.XOffset ? left.XOffset < right.XOffset : left.OAMIndex < right.OAMIndex;
@@ -57,45 +79,18 @@ namespace GBEmu.Emulator
 	}
 
 	public enum LCDMode : byte { Mode0, Mode1, Mode2, Mode3 }
-
+	
 	class Video : TimedIODevice
 	{
 		#region Video constants
-		#region LCDC Constants
-		private const byte LCDC_DISPLAY = 0x80;
-		private const byte LCDC_WIN_TILE_MAP = 0x40;
-		private const byte LCDC_WIN_ENABLE = 0x20;
-		private const byte LCDC_BGWIN_TILE_DATA = 0x10;
-		private const byte LCDC_BG_TILE_MAP = 0x08;
-		private const byte LCDC_SPRITE_SIZE = 0x04;
-		private const byte LCD_SPRITE_DISPLAY = 0x02;
-		private const byte LCDC_BG_DISPLAY_GB = 0x01;
-		#endregion
-
-		#region Sprite Read Constants
-		private const byte SpritePalette = 0x07;	//_____NNN : Selects from OBP 0-7 (CGB)
-		private const byte SpriteVRamBank = 0x08;	//____N___ : Selects from VRAM Bank 0 or 1 (CGB)
-		private const byte SpritePaletteNum = 0x10;	//___N____ : Selects from OBP0 or OBP1
-		private const byte SpriteXFlip = 0x20;		//__N_____ : 1 = Horizontal Flip
-		private const byte SpriteYFlip = 0x40;		//_N______ : 1 = Vertical Flip
-		private const byte SpritePriority = 0x80;	//N_______ : 1 = (hides behind BG color 1 - 3)
-		#endregion
-
-		#region Screen constants
 		private const int LCDWidth = 160;
 		private const int LCDHeight = 144;
 		private const int LCDStride = LCDWidth;
 		private const int LCDArraySize = LCDStride * LCDHeight;
 
-		private const int TileWidth = 8;
-		private const int TileHeight = 8;
-
-		private const int TileMapXCount = 32;
+		private const int TileMapStride = 32;
 
 		private const byte LYLimit = 154;
-		#endregion
-
-		private const byte STAT_MODEFLAG = 0x03;
 		#endregion
 
 		#region Video components
@@ -103,31 +98,19 @@ namespace GBEmu.Emulator
 		private IRenderable screen;
 		#endregion
 
-		#region LCD state and access permissions
-		private LCDMode LCDState
-		{
-			get
-			{
-				return (LCDMode)(LCDStatus & STAT_MODEFLAG);
-			}
-			set
-			{
-				LCDStatus &= 0xF8;
-				LCDStatus |= (byte)value;
-			}
-		}
+		#region LCD access permissions
 		private bool OAMAccessAllowed
 		{
 			get
 			{
-				return (LCDState == LCDMode.Mode1) || (LCDState == LCDMode.Mode0);
+				return (LCDState == LCDMode.Mode1) || (LCDState == LCDMode.Mode0) || !LCDEnabled;
 			}
 		}
 		private bool VRAMAccessAllowed
 		{
 			get
 			{
-				return LCDState != LCDMode.Mode3;
+				return (LCDState != LCDMode.Mode3) || !LCDEnabled;
 			}
 		}
 		#endregion
@@ -139,21 +122,21 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDControl & LCDC_DISPLAY) != 0;
+				return (LCDControl & 0x80) != 0;
 			}
 		}//Bit 7
 		private int WindowTileMapStart
 		{
 			get
 			{
-				return (LCDControl & LCDC_WIN_TILE_MAP) == 0 ? 0x1800 : 0x1C00;
+				return (LCDControl & 40) == 0 ? 0x1800 : 0x1C00;
 			}
 		}//Bit 6
 		private bool IsWindowEnabled
 		{
 			get
 			{
-				return (LCDControl & LCDC_WIN_ENABLE) != 0;
+				return (LCDControl & 0x20) != 0;
 			}
 		}//Bit 5
 		private int BGWinTileDataStart
@@ -167,14 +150,14 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDControl & LCDC_BG_TILE_MAP) == 0 ? 0x1800 : 0x1C00;
+				return (LCDControl & 0x08) == 0 ? 0x1800 : 0x1C00;
 			}
 		}//Bit 3
-		private int SpriteHeight
+		private bool Sprite8By16Mode
 		{
 			get
 			{
-				return (LCDControl & LCDC_SPRITE_SIZE) == 0 ? TileHeight : TileHeight * 2;
+				return (LCDControl & 0x04) != 0;
 			}
 
 		}//Bit 2
@@ -182,21 +165,21 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDControl & LCD_SPRITE_DISPLAY) != 0;
+				return (LCDControl & 0x02) != 0;
 			}
 		}//Bit 1
 		private bool DMGBackgroundEnabled
 		{
 			get
 			{
-				return (LCDControl & LCDC_BG_DISPLAY_GB) != 0;
+				return (LCDControl & 0x01) != 0;
 			}
 		}//Bit 0
 		private bool isComplementTileIndexingUsed
 		{
 			get
 			{
-				return (LCDControl & LCDC_BGWIN_TILE_DATA) == 0;
+				return (LCDControl & 0x10) == 0;
 			}
 		}
 		#endregion
@@ -206,28 +189,28 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & STAT_LYC_LY_INTERRUPT_FLAG) != 0;
+				return (LCDStatus & 0x80) != 0;
 			}
 		}//Bit 7
 		private bool Mode2_OAMInterruptEnabled
 		{
 			get
 			{
-				return (LCDStatus & STAT_MODE2_OAM_INTERRUPT) != 0;
+				return (LCDStatus & 0x40) != 0;
 			}
 		}//Bit 6
 		private bool Mode1_VBlankInterruptEnabled
 		{
 			get
 			{
-				return (LCDStatus & STAT_MODE1_VBLANK_INTERRUPT) != 0;
+				return (LCDStatus & 0x20) != 0;
 			}
 		}//Bit 5
 		private bool Mode0_HBlankInterruptEnabled
 		{
 			get
 			{
-				return (LCDStatus & STAT_MODE0_HBLANK_INTERRUPT) != 0;
+				return (LCDStatus & 0x10) != 0;
 			}
 		}//Bit 4
 		private bool LYCoincidence
@@ -236,18 +219,30 @@ namespace GBEmu.Emulator
 			{
 				if (value)
 				{
-					LCDStatus |= STAT_COINCIDENCE_FLAG;
+					LCDStatus |= 0x08;
 				}
 				else
 				{
-					LCDStatus &= STAT_COINCIDENCE_FLAG_OFF;
+					LCDStatus &= 0xF7;
 				}
 			}
 			get
 			{
-				return (LCDStatus & STAT_COINCIDENCE_FLAG) != 0;
+				return (LCDStatus & 0x08) != 0;
 			}
 		}//Bit 3
+		private LCDMode LCDState
+		{
+			get
+			{
+				return (LCDMode)(LCDStatus & 0x03);
+			}
+			set
+			{
+				LCDStatus &= 0xF8;
+				LCDStatus |= (byte)value;
+			}
+		}//Bit 2-0
 		#endregion
 		#endregion
 
@@ -265,33 +260,15 @@ namespace GBEmu.Emulator
 		private byte BackgroundPaletteData;//FF47
 		private byte ObjectPalette0Data;//FF48
 		private byte ObjectPalette1Data;//FF49
-		private ARGBColor[] BGPalette_DMG;
-		private ARGBColor[] OBJPalette0_DMG;
-		private ARGBColor[] OBJPalette1_DMG;
-		private ARGBColor[][] ObjectPalettes;
+		private XnaColor[] BGPalette_DMG;
+		private XnaColor[] OBJPalette0_DMG;
+		private XnaColor[] OBJPalette1_DMG;
+		private XnaColor[][] ObjectPalettes;
 		#endregion
 
 		#region Window
 		private byte WindowY;//FF4A
 		private byte WindowX;//FF4B
-		#endregion
-
-		public int ExecutedFrameCycles;
-		private int TimeToNextModeChange;
-		private int SpriteCountOnCurrentLine;
-
-		#region STAT Constants
-		#region Enable Constants (OR)
-		private const byte STAT_LYC_LY_INTERRUPT_FLAG = 0x40;
-		private const byte STAT_MODE2_OAM_INTERRUPT = 0x20;
-		private const byte STAT_MODE1_VBLANK_INTERRUPT = 0x10;
-		private const byte STAT_MODE0_HBLANK_INTERRUPT = 0x08;
-		private const byte STAT_COINCIDENCE_FLAG = 0x04;
-		#endregion
-
-		#region Disable Constants (AND)
-		private const byte STAT_COINCIDENCE_FLAG_OFF = 0xFB;
-		#endregion
 		#endregion
 
 		#region Cycle Constants
@@ -304,15 +281,20 @@ namespace GBEmu.Emulator
 		private const int LineDrawCycles = 456;
 		#endregion
 
-		private int[] LCDMap;
+		private XnaColor[] LCDMap;
 
 		public byte[] VRAM;//0x8000-0x9FFF
 		
-		public byte[] OAM;
+		public byte[] OAM;//0xFE00-0xFE9F
 
-		private bool LCDScreenOn;
+		public int ExecutedFrameCycles;
+
+		private int TimeToNextModeChange;
+		
+		private int SpriteCountOnCurrentLine;
 
 		private SpriteInfo[] SpriteInfoTable;
+		
 		private static int SpriteInfoSize = 4;
 
 		public Video(InterruptManager iM, IRenderable newScreen)
@@ -323,14 +305,17 @@ namespace GBEmu.Emulator
 			InitializeVideoMemory();
 			InitializePalettes();
 			InitializeLCD();
-			LCDScreenOn = true;
 			ShiftMode(LCDMode.Mode2);
 		}
 
 		#region Initialization
 		private void InitializeLCD()
 		{
-			LCDMap = new int[LCDArraySize];
+			LCDMap = new XnaColor[LCDArraySize];
+			for (int i = 0; i < LCDMap.Length; i++)
+			{
+				LCDMap[i] = DMGPredefColor.White;
+			}
 			LCDControl = 0x91;
 			ScrollX = 0x00;
 			ScrollY = 0x00;
@@ -351,12 +336,12 @@ namespace GBEmu.Emulator
 			BackgroundPaletteData = 0xFC;
 			ObjectPalette0Data = 0xFF;
 			ObjectPalette1Data = 0xFF;
-			BGPalette_DMG = new ARGBColor[4];
-			OBJPalette0_DMG = new ARGBColor[4];
+			BGPalette_DMG = new XnaColor[4];
+			OBJPalette0_DMG = new XnaColor[4];
 			OBJPalette0_DMG[0] = DMGPredefColor.Transparent;
-			OBJPalette1_DMG = new ARGBColor[4];
+			OBJPalette1_DMG = new XnaColor[4];
 			OBJPalette1_DMG[0] = DMGPredefColor.Transparent;
-			ObjectPalettes = new ARGBColor[2][] { OBJPalette0_DMG, OBJPalette1_DMG };
+			ObjectPalettes = new XnaColor[2][] { OBJPalette0_DMG, OBJPalette1_DMG };
 			UpdateBackgroundPalette();
 			UpdateObjectPalette0();
 			UpdateObjectPalette1();
@@ -410,7 +395,7 @@ namespace GBEmu.Emulator
 
 		private byte VRAMRead(int position)
 		{
-			if (position >= 0x8000 && position < 0xA000 && ((LCDScreenOn && VRAMAccessAllowed) || !LCDScreenOn))
+			if (position >= 0x8000 && position < 0xA000 && VRAMAccessAllowed)
 			{
 				return VRAM[position - 0x8000];
 			}
@@ -419,7 +404,7 @@ namespace GBEmu.Emulator
 
 		private byte OAMRead(int position)
 		{
-			if (position >= 0xFE00 && position < 0xFEA0 & ((LCDScreenOn && OAMAccessAllowed) || !LCDScreenOn))
+			if (position >= 0xFE00 && position < 0xFEA0 & OAMAccessAllowed)
 			{
 				return OAM[position - 0xFE00];
 			}
@@ -444,9 +429,9 @@ namespace GBEmu.Emulator
 				switch (position & 0xFF)
 				{
 					case IOPorts.LCDC:
+						bool LCDOnOff = LCDEnabled;
 						LCDControl = data;
-						if (!LCDEnabled) TurnOffLCD();
-						else TurnOnLCD();
+						if (!LCDOnOff && LCDEnabled) ResetLY();
 						break;
 					case IOPorts.STAT:
 						LCDStatus |= (byte)(data & 0x78);
@@ -491,7 +476,7 @@ namespace GBEmu.Emulator
 		{
 			if (position >= 0x8000 && position < 0xA000)
 			{
-				if ((LCDScreenOn && VRAMAccessAllowed) || !LCDScreenOn)
+				if (VRAMAccessAllowed)
 				{
 					VRAM[position - 0x8000] = data;
 				}
@@ -500,36 +485,21 @@ namespace GBEmu.Emulator
 
 		private void OAMWrite(int position, byte data)
 		{
-			if ((LCDScreenOn && OAMAccessAllowed) || !LCDScreenOn)
+			if (OAMAccessAllowed)
 			{
 				OAM[position - 0xFE00] = data;
 			}
 		}
 		#endregion
 
-		#region LCD general control
-		private void TurnOffLCD()
-		{
-			if (LCDScreenOn)
-			{
-				LCDScreenOn = false;
-				ResetLY();
-			}
-		}
-
-		private void TurnOnLCD()
-		{
-			if (!LCDScreenOn)
-			{
-				LCDScreenOn = true;
-				ResetLY();
-			}
-		}
-
+		#region LY/mode management
 		private void IncrementLY()
 		{
 			LY++;
-			if (LY >= LYLimit) LY = 0;
+			if (LY >= LYLimit)
+			{
+				LY = 0;
+			}
 			if (LY == LYCompare)
 			{
 				LYCoincidence = true;
@@ -539,8 +509,14 @@ namespace GBEmu.Emulator
 
 		private void ResetLY()
 		{
-			CycleCounter = 0;
 			LY = 0;
+			if (LY == LYCompare)
+			{
+				LYCoincidence = true;
+				if (LYCoincidenceInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
+			}
+			CycleCounter = 0;
+			ExecutedFrameCycles = 0;
 			ShiftMode(LCDMode.Mode2);
 		}
 
@@ -566,7 +542,6 @@ namespace GBEmu.Emulator
 							interruptManager.RequestInterrupt(InterruptType.LCDC);
 						}
 						interruptManager.RequestInterrupt(InterruptType.VBlank);
-						screen.CopyData(LCDMap);
 					}
 					break;
 				case Emulator.LCDMode.Mode2://Searching OAM
@@ -583,6 +558,9 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region Palette updating
+		/// <summary>
+		/// Updates the current DMG background palette.
+		/// </summary>
 		public void UpdateBackgroundPalette()
 		{
 			for (int ColorNumber = 0; ColorNumber < 4; ColorNumber++)
@@ -592,6 +570,9 @@ namespace GBEmu.Emulator
 			}
 		}
 
+		/// <summary>
+		/// Updates the current DMG OBP0 palette.
+		/// </summary>
 		public void UpdateObjectPalette0()
 		{
 			for (int ColorNumber = 1; ColorNumber < 4; ColorNumber++)//Only copy for colors 1-3, because 0 is transparent
@@ -601,6 +582,10 @@ namespace GBEmu.Emulator
 			}
 		}
 
+
+		/// <summary>
+		/// Updates the current DMG OBP1 palette.
+		/// </summary>
 		public void UpdateObjectPalette1()
 		{
 			for (int ColorNumber = 1; ColorNumber < 4; ColorNumber++)//Only copy for colors 1-3, because 0 is transparent
@@ -612,133 +597,145 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region Scanline drawing
-		private int DrawScanline()
+		/// <summary>
+		/// Draws a scanline on the screen.
+		/// </summary>
+		private void DrawScanline()
 		{
-			int SpritesDrawn = 0;
 			if (LY < LCDHeight)
 			{
 				if (LCDEnabled)
 				{
-					if (DMGBackgroundEnabled)
-					{
-						DrawTiles();
-					}
-					if (SpritesEnabled)
-					{
-						SpritesDrawn = DrawSprites();
-					}
+					DrawTiles();
+					DrawSprites();
 				}
 				else
 				{
-					DrawBlankScanline();
+					if (LY == 72) DrawBlackScanline();
+					else DrawWhiteScanline();
 				}
 			}
-			return SpritesDrawn;
 		}
 
-		private void DrawBlankScanline()
+		/// <summary>
+		/// Draws a white scanline on the LCD.
+		/// </summary>
+		private void DrawWhiteScanline()
 		{
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				SetPixel((LY * LCDStride) + LCD_X, DMGPredefColor.White);
+				SetPixel(LCD_X, LY, DMGPredefColor.White);
 			}
 		}
 
+		/// <summary>
+		/// Draws a black scanline on the LCD.
+		/// </summary>
+		private void DrawBlackScanline()
+		{
+			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
+			{
+				SetPixel(LCD_X, LY, DMGPredefColor.Black);
+			}
+		}
+
+		/// <summary>
+		/// Draws the background/window tiles on the current scanline.
+		/// </summary>
 		private void DrawTiles()
 		{
+			if (!(DMGBackgroundEnabled || IsWindowEnabled)) return;
 			bool isScanlineIntersectingWindow = (IsWindowEnabled && WindowY <= LY);
-			int[] lastTileLine = new int[TileWidth];
 			byte BGY = (byte)(ScrollY + LY);
 			byte BGX = 0;
 			byte WinY = (byte)(LY - WindowY);
 			byte WinX = 0;
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				//For drawing from window
+				int TileMapX = 0;
+				int TileMapY = 0;
+				int TileMapStart = 0;
 				if (isScanlineIntersectingWindow && LCD_X >= (WindowX - 7))
 				{
 					WinX = (byte)(LCD_X - (WindowX - 7));
-					byte TileIndexWin = VRAM[WindowTileMapStart + ((WinY >> 3) * TileMapXCount) + (WinX >> 3)];
-					if (isComplementTileIndexingUsed) TileIndexWin += 0x80;
-					int TilePosWin = BGWinTileDataStart + (TileIndexWin * 0x10);
-					int TileOffYWin = WinY & 0x7;
-					int TileOffXWin = WinX & 0x7;
-					FetchTileLineFromTile(TilePosWin, TileOffYWin, lastTileLine, false, false);
-					SetPixel(LY * LCDStride + LCD_X, BGPalette_DMG[lastTileLine[TileOffXWin]]);
+					TileMapStart = WindowTileMapStart;
+					TileMapX = WinX;
+					TileMapY = WinY;
 				}
-				//For drawing from map
 				else
 				{
 					BGX = (byte)(ScrollX + LCD_X);
-					byte TileIndexBG = VRAM[BGTileMapStart + ((BGY >> 3) * TileMapXCount) + (BGX >> 3)];
-					if (isComplementTileIndexingUsed) TileIndexBG += 0x80;
-					int TilePosBG = BGWinTileDataStart + (TileIndexBG * 0x10);
-					int TileOffYBG = BGY & 0x7;
-					int TileOffXBG = BGX & 0x7;
-					FetchTileLineFromTile(TilePosBG, TileOffYBG, lastTileLine, false, false);
-					SetPixel(LY * LCDStride + LCD_X, BGPalette_DMG[lastTileLine[TileOffXBG]]);
+					TileMapStart = BGTileMapStart;
+					TileMapX = BGX;
+					TileMapY = BGY;
 				}
+				byte TileIndex = VRAM[TileMapStart + ((TileMapY >> 3) * 32) + (TileMapX >> 3)];
+				if (isComplementTileIndexingUsed) TileIndex += 0x80;
+				int TileOffset = BGWinTileDataStart + (TileIndex * 0x10);
+				int TilePixelColor = GetPixelPaletteNumberFromTile(TileOffset, TileMapX & 0x7, TileMapY & 0x7, false, false);
+				SetPixel(LCD_X, LY, BGPalette_DMG[TilePixelColor]);
 			}
 		}
 
-		private int DrawSprites()
+		/// <summary>
+		/// Draws the sprites on the current scanline.
+		/// </summary>
+		private void DrawSprites()
 		{
-			if (SpritesEnabled)
+			if (!SpritesEnabled) return;
+			int LineSpriteCount = 0;
+			for (int i = 0; i < SpriteInfoTable.Length; i++)
 			{
-				int LCD_X = 0;
-				int LineSpriteCount = 0;
-				int[] lastTileLine = new int[TileWidth];
-				for (int i = 0; i < SpriteInfoTable.Length; i++)
+				SpriteInfo r = SpriteInfoTable[i];
+				if (LY >= r.YOffset - 16 && LY < r.YOffset) //If the sprite intersects LY...
 				{
-					SpriteInfo r = SpriteInfoTable[i];
-					if (LY >= r.YOffset - 16 && LY < r.YOffset)
+					LineSpriteCount++;//Increment the sprite count for the line.
+					int SpriteTileY = LY + (r.YOffset - 16);
+					if (!Sprite8By16Mode && SpriteTileY >= 8) continue;
+					for (int LCD_X = r.XOffset - 8; LCD_X < r.XOffset; LCD_X++)
 					{
-						LineSpriteCount++;
-						if (r.XOffset > LCD_X && r.XOffset > 0 && r.XOffset < LCDWidth - TileWidth)
+						if (LCD_X < 0 || LCD_X > LCDWidth) continue;
+						int SpriteTileX = LCD_X - (r.XOffset - 8);
+						int SpriteTileOff = r.TileIndex * 0x10;
+						if (Sprite8By16Mode && SpriteTileY >= 8)//If the sprite is drawing its second tile in 8x16 mode
 						{
-							int pixelLine = r.YOffset - LY;
-							int tilePosition = r.TileIndex * 0x10;
-							bool XFlip = (r.SpriteProperties & SpriteXFlip) != 0;
-							bool YFlip = (r.SpriteProperties & SpriteYFlip) != 0;
-							if (pixelLine < TileWidth || SpriteHeight == 16)
-							{
-								if (r.XOffset - TileWidth >= LCD_X) LCD_X = r.XOffset - TileWidth;
-								if (SpriteHeight == 16)
-								{
-									pixelLine -= TileWidth;
-									tilePosition++;
-								}
-								FetchTileLineFromTile(tilePosition, pixelLine, lastTileLine, XFlip, YFlip);
-								for (int j = r.XOffset - LCD_X; j < r.XOffset; j++)
-								{
-									//Priority 0 : Sprites draw over BG, except in the case of color 0.
-									//Priority 1 : Sprites aren't drawn over BG, except when color is white (?)
-									if (((r.SpriteProperties & SpritePriority) == 0) ? lastTileLine[j] != 0 : IsPixelWhite(LY, LCD_X))
-									{
-										SetPixel(LY * LCDStride + LCD_X, ObjectPalettes[r.OAMIndex][lastTileLine[j]]);
-									}
-								}
-							}
+							//Use the second tile offset instead, which is right after the first.
+							SpriteTileY -= 8;
+							SpriteTileOff++;
+						}
+						int SpritePixelNum = GetPixelPaletteNumberFromTile(SpriteTileOff, SpriteTileX, SpriteTileY, r.XFlip, r.YFlip);
+						//PriorityOverBG : Sprites are draw over BG, except in the case of color 0.
+						//!PriorityOverBG : Sprites aren't drawn over BG, except when BG color is white (?)
+						if (r.PriorityOverBG ? SpritePixelNum != 0 : GetPixel(LCD_X, LY) == DMGPredefColor.White)
+						{
+							SetPixel(LCD_X, LY, ObjectPalettes[r.DMGObjectPaletteNum][SpritePixelNum]);
 						}
 					}
-					if (LineSpriteCount >= 10) break;
 				}
-				return LineSpriteCount;
+				if (LineSpriteCount >= 10) break;
 			}
-			else return 0;
 		}
 
-		private void FetchTileLineFromTile(int position, int lineNum, int[] outArr, bool XFlip, bool YFlip)
+		/// <summary>
+		/// Fetches the palette number of the 'color' at the specified position inside a tile.
+		/// </summary>
+		/// <param name="tileOffset">The position of the tile in VRAM.</param>
+		/// <param name="xPos">The X position of the pixel in the tile.</param>
+		/// <param name="yPos">The Y position of the pixel in the tile.</param>
+		/// <param name="xFlip">Whether the tile is flipped on the X axis.</param>
+		/// <param name="yFlip">Whether the tile is flipped on the Y axis.</param>
+		/// <returns>The palette number of the pixel.</returns>
+		private int GetPixelPaletteNumberFromTile(int tileOffset, int xPos, int yPos, bool xFlip, bool yFlip)
 		{
-			int pos = position + (YFlip ? ((7 - lineNum) * 2) : (lineNum * 2));
-			for (int i = 0; i < TileWidth; i++)
-			{
-				int plane0 = VRAM[pos + 0] >> (XFlip ? i : (7 - i));
-				int plane1 = VRAM[pos + 1] >> (XFlip ? i : (7 - i));
-				outArr[i] = plane0 + (plane1 * 2);
-			}
+			int tileXpos = xFlip ? (7 - xPos) : xPos;
+			int tileYpos = tileOffset + (yFlip ? ((7 - yPos) * 2) : (yPos * 2));
+			return (((VRAM[tileYpos + 1] >> tileXpos) & 1) << 1) + ((VRAM[tileYpos] >> tileXpos) & 1);
 		}
 
+		/// <summary>
+		/// Gets the number of sprites on the current line.
+		/// </summary>
+		/// <returns>The number of sprites on the line. If there are more than 10, 10 is returned.</returns>
 		private int GetSpriteCountOnCurrentScanline()
 		{
 			int spriteCount = 0;
@@ -747,9 +744,13 @@ namespace GBEmu.Emulator
 				if (LY >= SpriteInfoTable[i].YOffset - 16 && LY < SpriteInfoTable[i].YOffset) spriteCount++;
 
 			}
+			if (spriteCount > 10) spriteCount = 10;
 			return spriteCount;
 		}
 
+		/// <summary>
+		/// Reconstructs the sprite info table from OAM.
+		/// </summary>
 		public void ReconstructOAMTable()
 		{
 			for (int i = 0; i < SpriteInfoTable.Length; i++)
@@ -777,64 +778,83 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region Pixel setting
-		private void SetPixel(int offset, ARGBColor color)
+		/// <summary>
+		/// Sets a pixel on the main screen.
+		/// </summary>
+		/// <param name="x">The X position of the pixel.</param>
+		/// <param name="y">The Y position of the pixel.</param>
+		/// <param name="color">The color of the pixel.</param>
+		private void SetPixel(int x, int y, XnaColor color)
 		{
-			LCDMap[offset] = color.ARGBVal;
+			LCDMap[(x * LCDStride) + y] = color;
 		}
 
-		private bool IsPixelWhite(int ly, int lx)
+		/// <summary>
+		/// Gets the pixel at the specified location in the LCD.
+		/// </summary>
+		/// <param name="x">The X position of the pixel.</param>
+		/// <param name="y">THe Y position of the pixel.</param>
+		/// <returns>The pixel at the location.</returns>
+		private XnaColor GetPixel(int x, int y)
 		{
-			return LCDMap[ly * LCDStride + lx + 0] == DMGPredefColor.White.ARGBVal;
+			return LCDMap[(x * LCDStride) + y];
 		}
 		#endregion
 
 		public override void UpdateCounter(int cycles)
 		{
-			if (LCDScreenOn)
+			CycleCounter += cycles;
+			ExecutedFrameCycles += cycles;
+			if (ExecutedFrameCycles >= LCDDrawCycles)
 			{
-				CycleCounter += cycles;
-				ExecutedFrameCycles += cycles;
-				#region Changing modes (need to add special case for drawing scanline 0)
-				//Modes go 2 -> 3 -> 0 -> 2 ->...0 -> 1 -> 2
-				//LY increases happen after 0, or after each line of 1.
-				if (CycleCounter >= TimeToNextModeChange)
-				{
-					CycleCounter -= TimeToNextModeChange;
-					switch (LCDState)
-					{
-						case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
-							ShiftMode(Emulator.LCDMode.Mode3);
-							break;
-						case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
-							ShiftMode(Emulator.LCDMode.Mode0);
-							break;
-						case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
-							IncrementLY();
-							if (LY >= LCDHeight)
-							{
-								ShiftMode(Emulator.LCDMode.Mode1);
-							}
-							else
-							{
-								ShiftMode(Emulator.LCDMode.Mode2);
-							}
-							break;
-						case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
-							IncrementLY();
-							if (LY != 0)
-							{
-								ShiftMode(LCDMode.Mode1);
-							}
-							else
-							{
-								ShiftMode(Emulator.LCDMode.Mode2);
-								ExecutedFrameCycles = 0;
-							}
-							break;
-					}
-				}
-				#endregion
+				BlitScreen();
+				ExecutedFrameCycles = 0;
 			}
+			#region Changing modes (need to add special case for drawing scanline 0)
+			//Modes go 2 -> 3 -> 0 -> 2 ->...0 -> 1 -> ... -> 1 -> 2
+			//LY increases happen after 0, or after each line of 1.
+			if (CycleCounter >= TimeToNextModeChange)
+			{
+				CycleCounter -= TimeToNextModeChange;
+				switch (LCDState)
+				{
+					case LCDMode.Mode2://Mode 2: Searching OAM...no access to OAM, progresses to 3
+						ShiftMode(Emulator.LCDMode.Mode3);
+						break;
+					case LCDMode.Mode3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
+						ShiftMode(Emulator.LCDMode.Mode0);
+						break;
+					case LCDMode.Mode0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
+						IncrementLY();
+						if (LY >= LCDHeight)
+						{
+							ShiftMode(Emulator.LCDMode.Mode1);
+						}
+						else
+						{
+							ShiftMode(Emulator.LCDMode.Mode2);
+						}
+						break;
+					case LCDMode.Mode1://Mode 1: VBlank...access allowed, progresses to 2
+						IncrementLY();
+						if (LY != 0)
+						{
+							ShiftMode(LCDMode.Mode1);
+						}
+						else
+						{
+							ShiftMode(Emulator.LCDMode.Mode2);
+							ExecutedFrameCycles = 0;
+						}
+						break;
+				}
+			}
+			#endregion
+		}
+
+		public void BlitScreen()
+		{
+			screen.CopyData(LCDMap);
 		}
 	}
 }

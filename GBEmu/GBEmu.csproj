@@ -120,10 +120,6 @@
     <Compile Include="Emulator\InterruptManager.cs" />
     <Compile Include="Emulator\IODevice.cs" />
     <Compile Include="Emulator\Serial.cs" />
-    <Compile Include="Render\GDI\GDIRenderWindow.cs" />
-    <Compile Include="Render\GDI\GdiWindow.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Emulator\MMU.cs" />
     <Compile Include="Emulator\Video.cs" />
     <Compile Include="MainForm.cs">

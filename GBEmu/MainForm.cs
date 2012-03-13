@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using GBEmu.Emulator;
-using GBEmu.Render.Gdi;
-using GBEmu.Render;
-using GBEmu.Render.XNA;
 
 namespace GBEmu
 {
@@ -55,7 +50,7 @@ namespace GBEmu
 						break;
 					case GBSystemState.Running:
 						gbs.Pause();
-						TextBlit(gbs.FetchCPUState());
+						TextBoxWrite(gbs.FetchCPUState());
 						break;
 				}
 			}
@@ -63,11 +58,11 @@ namespace GBEmu
 
 		delegate void TextWrite(string info);
 
-		private void TextBlit(string info)
+		private void TextBoxWrite(string info)
 		{
 			if (richTextBox1.InvokeRequired)
 			{
-				TextWrite tw = new TextWrite(TextBlit);
+				TextWrite tw = new TextWrite(TextBoxWrite);
 				richTextBox1.Invoke(tw, new object[] { info });
 			}
 			else
@@ -83,28 +78,28 @@ namespace GBEmu
 				switch(e.KeyCode)
 				{
 					case Keys.Up:
-						lock (gbs) gbs.KeyChange(GBKeys.Up, true);
+						gbs.KeyChange(GBKeys.Up, true);
 						break;
 					case Keys.Down:
-						lock (gbs) gbs.KeyChange(GBKeys.Down, true);
+						gbs.KeyChange(GBKeys.Down, true);
 						break;
 					case Keys.Left:
-						lock (gbs) gbs.KeyChange(GBKeys.Left, true);
+						gbs.KeyChange(GBKeys.Left, true);
 						break;
 					case Keys.Right:
-						lock (gbs) gbs.KeyChange(GBKeys.Right, true);
+						gbs.KeyChange(GBKeys.Right, true);
 						break;
 					case Keys.A:
-						lock (gbs) gbs.KeyChange(GBKeys.A, true);
+						gbs.KeyChange(GBKeys.A, true);
 						break;
 					case Keys.B:
-						lock (gbs) gbs.KeyChange(GBKeys.B, true);
+						gbs.KeyChange(GBKeys.B, true);
 						break;
 					case Keys.Enter:
-						lock (gbs) gbs.KeyChange(GBKeys.Start, true);
+						gbs.KeyChange(GBKeys.Start, true);
 						break;
 					case Keys.RShiftKey:
-						lock (gbs) gbs.KeyChange(GBKeys.Select, true);
+						gbs.KeyChange(GBKeys.Select, true);
 						break;
 					default:
 						break;

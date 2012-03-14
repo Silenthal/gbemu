@@ -183,7 +183,7 @@ namespace GBEmu.Emulator
 						CycleCounter += 4;
 						break;
 					case CPUState.Normal:
-						wr(PC.w);
+						//wr(PC.w);
 						byte inst = ReadPC();
 						if (RepeatLastInstruction)//Halt bug
 						{
@@ -196,7 +196,7 @@ namespace GBEmu.Emulator
 							case 0x00://nop
 								break;
 							case 0x01://ld bc,nnnn
-								Load16Immediate(ref BC);
+								BC.w = ReadPCWord();
 								break;
 							case 0x02://ld [bc],a
 								WriteMMU(BC.w, AF.hi);
@@ -211,7 +211,7 @@ namespace GBEmu.Emulator
 								Dec8(ref BC.hi);
 								break;
 							case 0x06://ld b,nn
-								LoadImmediate(ref BC.hi);
+								BC.hi = ReadPC();
 								break;
 							case 0x07://rlca
 								RLC(ref AF.hi);
@@ -223,7 +223,7 @@ namespace GBEmu.Emulator
 								AddHL(BC.w);
 								break;
 							case 0x0A://ld a,[bc]
-								LoadFromMemory(ref AF.hi, BC.w);
+								AF.hi = ReadMMU(BC.w);
 								break;
 							case 0x0B://dec bc
 								Dec16(ref BC.w);
@@ -235,7 +235,7 @@ namespace GBEmu.Emulator
 								Dec8(ref BC.lo);
 								break;
 							case 0x0E://ld c,nn
-								LoadImmediate(ref BC.lo);
+								BC.lo = ReadPC();
 								break;
 							case 0x0F://rrca
 								RRC(ref AF.hi);
@@ -246,7 +246,7 @@ namespace GBEmu.Emulator
 								Stop();
 								break;
 							case 0x11://ld de,nnnn
-								Load16Immediate(ref DE);
+								DE.w = ReadPCWord();
 								break;
 							case 0x12://ld [de],a
 								WriteMMU(DE.w, AF.hi);
@@ -261,7 +261,7 @@ namespace GBEmu.Emulator
 								Dec8(ref DE.hi);
 								break;
 							case 0x16://ld d,nn
-								LoadImmediate(ref DE.hi);
+								DE.hi = ReadPC();
 								break;
 							case 0x17://rla
 								RL(ref AF.hi);
@@ -273,7 +273,7 @@ namespace GBEmu.Emulator
 								AddHL(DE.w);
 								break;
 							case 0x1A://ld a,[de]
-								LoadFromMemory(ref AF.hi, DE.w);
+								AF.hi = ReadMMU(DE.w);
 								break;
 							case 0x1B://dec de
 								Dec16(ref DE.w);
@@ -285,7 +285,7 @@ namespace GBEmu.Emulator
 								Dec8(ref DE.lo);
 								break;
 							case 0x1E://ld e,nn
-								LoadImmediate(ref DE.lo);
+								DE.lo = ReadPC();
 								break;
 							case 0x1F://rra
 								RR(ref AF.hi);
@@ -296,10 +296,11 @@ namespace GBEmu.Emulator
 								JumpRelative(!IsZero);
 								break;
 							case 0x21://ld hl,nnnn
-								Load16Immediate(ref HL);
+								HL.w = ReadPCWord();
 								break;
 							case 0x22://ldi [hl],a
-								LoadHL(AF.hi, LoadHLType.Inc);
+								WriteMMU(HL.w, AF.hi);
+								HL.w++;
 								break;
 							case 0x23://inc hl
 								Inc16(ref HL.w);
@@ -311,7 +312,7 @@ namespace GBEmu.Emulator
 								Dec8(ref HL.hi);
 								break;
 							case 0x26://ld h,nn
-								LoadImmediate(ref HL.hi);
+								HL.hi = ReadPC();
 								break;
 							case 0x27://daa
 								DecimalAdjustA();
@@ -336,7 +337,7 @@ namespace GBEmu.Emulator
 								Dec8(ref HL.lo);
 								break;
 							case 0x2E://ld l,nn
-								LoadImmediate(ref HL.lo);
+								HL.lo = ReadPC();
 								break;
 							case 0x2F://cpl
 								CPL();
@@ -347,10 +348,11 @@ namespace GBEmu.Emulator
 								JumpRelative(!IsCarry);
 								break;
 							case 0x31://ld sp,nnnn
-								Load16Immediate(ref SP);
+								SP.w = ReadPCWord();
 								break;
 							case 0x32://ldd [hl],a
-								LoadHL(AF.hi, LoadHLType.Dec);
+								WriteMMU(HL.w, AF.hi);
+								HL.w--;
 								break;
 							case 0x33://inc sp
 								Inc16(ref SP.w);
@@ -362,7 +364,7 @@ namespace GBEmu.Emulator
 								DecHL();
 								break;
 							case 0x36://ld [hl],nn
-								LoadHL(ReadPC(), LoadHLType.None);
+								WriteMMU(HL.w, ReadPC());
 								break;
 							case 0x37://scf
 								SCF();
@@ -387,7 +389,7 @@ namespace GBEmu.Emulator
 								Dec8(ref AF.hi);
 								break;
 							case 0x3E://ld a,nn
-								LoadImmediate(ref AF.hi);
+								AF.hi = ReadPC();
 								break;
 							case 0x3F://ccf
 								CCF();
@@ -794,10 +796,10 @@ namespace GBEmu.Emulator
 								Pop(ref BC.w);
 								break;
 							case 0xC2://jp nz,nnnn
-								Jump(!IsZero);
+								JumpImmediate(!IsZero);
 								break;
 							case 0xC3://jp nnnn
-								Jump(true);
+								JumpImmediate(true);
 								break;
 							case 0xC4://call nz,nnnn
 								Call(!IsZero);
@@ -818,7 +820,7 @@ namespace GBEmu.Emulator
 								Return(false);
 								break;
 							case 0xCA://jp z,nnnn
-								Jump(IsZero);
+								JumpImmediate(IsZero);
 								break;
 							case 0xCB://CB Instruction
 								CBstep();
@@ -844,7 +846,7 @@ namespace GBEmu.Emulator
 								Pop(ref DE.w);
 								break;
 							case 0xD2://jp nc, nnnn
-								Jump(!IsCarry);
+								JumpImmediate(!IsCarry);
 								break;
 							case 0xD3://--
 								break;
@@ -867,7 +869,7 @@ namespace GBEmu.Emulator
 								Return(true);
 								break;
 							case 0xDA://jp c,nnnn
-								Jump(IsCarry);
+								JumpImmediate(IsCarry);
 								break;
 							case 0xDB://--
 								break;
@@ -968,9 +970,7 @@ namespace GBEmu.Emulator
 								CycleCounter += 4;
 								break;
 							case 0xFA://ld a,[nnnn]
-								Register tempLoc = new Register();
-								Load16Immediate(ref tempLoc);
-								AF.hi = ReadMMU(tempLoc.w);
+								AF.hi = ReadMMU(ReadPCWord());
 								break;
 							case 0xFB://ei
 								interruptManager.EnableInterrupts();
@@ -1841,11 +1841,8 @@ namespace GBEmu.Emulator
 
 		#region Reading and writing
 		/// <summary>
-		/// Read a byte from the MMU.
+		/// Read a byte from the MMU. Takes 4 cycles to complete.
 		/// </summary>
-		/// <remarks>
-		/// This operation takes 4 cycles.
-		/// </remarks>
 		/// <param name="address">The address of the source.</param>
 		/// <returns>The byte at the address, or 0xFF if the read failed.</returns>
 		private byte ReadMMU(ushort address)
@@ -1854,11 +1851,8 @@ namespace GBEmu.Emulator
 			return mmu.Read(address);
 		}
 		/// <summary>
-		/// Writes a byte to a given address.
+		/// Writes a byte to a given address. Takes 4 cycles to complete.
 		/// </summary>
-		/// <remarks>
-		/// This operation takes 4 cycles.
-		/// </remarks>
 		/// <param name="address">The address of the destination.</param>
 		/// <param name="data">The byte to write.</param>
 		private void WriteMMU(ushort address, byte data)
@@ -1867,7 +1861,7 @@ namespace GBEmu.Emulator
 			mmu.Write(address, data);
 		}
 		/// <summary>
-		/// Reads a word, using the Program Counter as an address.
+		/// Reads a word using the Program Counter as an address, and increments the PC. Takes 8 cycles to complete.
 		/// </summary>
 		/// <returns>The little-endian word at the address</returns>
 		private ushort ReadPCWord()
@@ -1877,7 +1871,7 @@ namespace GBEmu.Emulator
 			return ret.w;
 		}
 		/// <summary>
-		/// Reads a byte, using the Program Counter as an address.
+		/// Reads a byte using the Program Counter as an address, and increments the PC. Takes 4 cycles to complete.
 		/// </summary>
 		/// <returns>The byte at the address.</returns>
 		private byte ReadPC()
@@ -1887,7 +1881,7 @@ namespace GBEmu.Emulator
 			return read;
 		}
 		/// <summary>
-		/// Reads a byte, using the Stack Pointer as an address.
+		/// Reads a byte using the Stack Pointer as an address, and increments the SP. Takes 4 cycles to complete.
 		/// </summary>
 		/// <returns>The byte at the address.</returns>
 		private byte ReadSP()
@@ -1897,7 +1891,7 @@ namespace GBEmu.Emulator
 			return read;
 		}
 		/// <summary>
-		/// Writes a little-endian word to the given address.
+		/// Writes a little-endian word to the given address. Takes 8 cycles to complete.
 		/// </summary>
 		/// <param name="dest">The address of the destination.</param>
 		/// <param name="data">The word to write.</param>
@@ -1908,7 +1902,7 @@ namespace GBEmu.Emulator
 			WriteMMU(dest, (byte)((data >> 8) & 0xFF));
 		}
 		/// <summary>
-		/// Changes the Program Counter to point to a new location.
+		/// Changes the Program Counter to point to a new location. Takes 4 cycles to complete.
 		/// </summary>
 		/// <param name="newAddress">The new address the PC will point to.</param>
 		private void PCChange(ushort newAddress)
@@ -1927,15 +1921,14 @@ namespace GBEmu.Emulator
 		/// Z is set if result is zero.
 		/// N is reset.
 		/// H is set if there is carry from bit 3.
-		/// C is not affected.
+		/// C is unaffected.
 		/// </remarks>
 		/// <param name="register">The register to increment.</param>
 		private void Inc8(ref byte register)
 		{
-			CycleCounter += 4;
 			int temp = register + 1;
-			int tempover = register ^ 1 ^ temp;
-			IsHalfCarry = ((tempover & 0x10) != 0);
+			int tempXOR = register ^ 1 ^ temp;
+			IsHalfCarry = ((tempXOR & 0x10) != 0);
 			IsNegativeOp = false;
 			register++;
 			IsZero = (register == 0);
@@ -1947,20 +1940,20 @@ namespace GBEmu.Emulator
 		/// Z is set if result is zero.
 		/// N is set.
 		/// H is set if there is carry from bit 4.
-		/// C is not affected.
+		/// C is unaffected.
 		/// </remarks>
 		/// <param name="register">The register to decrement.</param>
 		private void Dec8(ref byte register)
 		{
 			int temp = register - 1;
-			int tempover = register ^ -1 ^ temp;
-			IsHalfCarry = ((tempover & 0xF) != 0);
+			int tempXOR = register ^ -1 ^ temp;
+			IsHalfCarry = ((tempXOR & 0x08) != 0);
 			IsNegativeOp = true;
 			register--;
 			IsZero = (register == 0);
 		}
 		/// <summary>
-		/// Increments the given 16-bit register pair.
+		/// Increments the given 16-bit register pair. Takes 8 cycles to complete.
 		/// </summary>
 		/// <remarks>
 		/// Z is unaffected.
@@ -1974,67 +1967,147 @@ namespace GBEmu.Emulator
 			incHL++;
 			WriteMMU(HL.w, incHL);
 		}
+		/// <summary>
+		/// Decrements the given 16-bit register pair. Takes 8 cycles to complete.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
 		private void DecHL()
 		{
 			byte decHL = ReadMMU(HL.w);
 			decHL--;
 			WriteMMU(HL.w, decHL);
 		}
-		private void AddA(byte add, bool addCarry)
+		/// <summary>
+		/// Adds the given value to A.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is zero.
+		/// N is reset.
+		/// H is set if there is carry from bit 3.
+		/// C is set if there is carry from bit 7.
+		/// </remarks>
+		/// <param name="addedValue">The value to add to A.</param>
+		/// <param name="addCarry">True if the operation is an add-with-carry.</param>
+		private void AddA(byte addedValue, bool addCarry)
 		{
-			byte tempAdd = (byte)(add + (addCarry ? IsCarry ? 1 : 0 : 0));
-			int temp = AF.hi + tempAdd;
-			int tempover = AF.hi ^ tempAdd ^ temp;
-			IsHalfCarry = ((tempover & 0x10) != 0);
-			IsCarry = ((tempover & 0x100) != 0);
+			int tempAdd = (byte)(addedValue + (addCarry ? IsCarry ? 1 : 0 : 0));
+			int temp = AF.hi + addedValue + (addCarry ? (IsCarry ? 1 : 0) : 0);
+			int tempXOR = AF.hi ^ addedValue ^ (addCarry ? (IsCarry ? 1 : 0) : 0) ^ temp;
+			IsHalfCarry = ((tempXOR & 0x10) != 0);
+			IsCarry = ((tempXOR & 0x100) != 0);
 			IsNegativeOp = false;
-			AF.hi += tempAdd;
+			AF.hi = (byte)temp;
 			IsZero = (AF.hi == 0);
 		}
-		private void SubA(byte sub, bool subCarry)
+		/// <summary>
+		/// Subtracts the given value from A.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is zero.
+		/// N is set.
+		/// H is set if there is carry from bit 4? (Check this)
+		/// C is set if there is carry from bit 8? (Check this)
+		/// </remarks>
+		/// <param name="subtractedValue">The value to subtract from A.</param>
+		/// <param name="subCarry">True if the operation is a subtract-with-carry.</param>
+		private void SubA(byte subtractedValue, bool subCarry)
 		{
-			byte tempsub = (byte)(sub + (subCarry ? IsCarry ? 1 : 0 : 0));
-			int temp = AF.hi - tempsub;
-			int tempover = AF.hi ^ tempsub ^ temp;
-			IsHalfCarry = ((tempover & 0x10) != 0);
-			IsCarry = ((tempover & 0x100) != 0);
+			byte tempsub = (byte)(subtractedValue + (subCarry ? IsCarry ? 1 : 0 : 0));
+			int temp = AF.hi - (subtractedValue + (subCarry ? IsCarry ? 1 : 0 : 0));
+			int tempover = AF.hi ^ -subtractedValue ^ (subCarry ? (IsCarry ? -1 : 0) : 0) ^ temp;
+			IsHalfCarry = ((tempover & 0x08) != 0);
+			IsCarry = ((tempover & 0x80) != 0);
 			IsNegativeOp = true;
-			AF.hi -= tempsub;
+			AF.hi = (byte)temp;
 			IsZero = (AF.hi == 0);
 		}
-		private void AndA(byte val)
+		/// <summary>
+		/// ANDs the given value with A.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is 0.
+		/// N is reset.
+		/// H is set.
+		/// C is reset.
+		/// </remarks>
+		/// <param name="value">The value to use.</param>
+		private void AndA(byte value)
 		{
-			AF.hi &= val;
+			AF.hi &= value;
 			IsZero = AF.hi == 0;
 			IsNegativeOp = false;
 			IsHalfCarry = true;
 			IsCarry = false;
 		}
-		private void OrA(byte val)
+		/// <summary>
+		/// ORs the given value with A.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is 0.
+		/// N is reset.
+		/// H is reset.
+		/// C is reset.
+		/// </remarks>
+		/// <param name="value">The value to use.</param>
+		private void OrA(byte value)
 		{
-			AF.hi |= val;
+			AF.hi |= value;
 			IsZero = AF.hi == 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
 			IsCarry = false;
 		}
-		private void XorA(byte val)
+		/// <summary>
+		/// XORs the given value with A.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is 0.
+		/// N is reset.
+		/// H is reset.
+		/// C is reset.
+		/// </remarks>
+		/// <param name="value">The value to use.</param>
+		private void XorA(byte value)
 		{
-			AF.hi ^= val;
+			AF.hi ^= value;
 			IsZero = AF.hi == 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
 			IsCarry = false;
 		}
-		private void CpA(byte val)
+		/// <summary>
+		/// Compares the given value with A. Results are equivalent to "sub a", without A changing.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the result is zero.
+		/// N is set.
+		/// H is set if there is carry from bit 4? (Check this)
+		/// C is set if there is carry from bit 8? (Check this)
+		/// </remarks>
+		/// <param name="value">The value to use.</param>
+		private void CpA(byte value)
 		{
+			int temp = AF.hi - value;
+			int tempover = AF.hi ^ -value ^  temp;
+			IsHalfCarry = ((tempover & 0x08) != 0);
+			IsCarry = ((tempover & 0x80) != 0);
 			IsNegativeOp = true;
-			int temp = AF.hi - val;
-			int tempX = AF.hi ^ val ^ temp;
-			IsHalfCarry = (tempX & 0x10) != 0;
-			IsCarry = (tempX & 0x100) != 0;
 			IsZero = (temp & 0xFF) == 0;
 		}
+		/// <summary>
+		/// Adjusts A to be a Binary Coded Decimal.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if A is 0.
+		/// N is unaffected.
+		/// H is reset.
+		/// C is set/reset depending on the results.
+		/// </remarks>
 		private void DecimalAdjustA()
 		{
 			byte correction = (byte)(IsCarry ? 0x60 : 0x00);
@@ -2051,7 +2124,17 @@ namespace GBEmu.Emulator
 			}
 			IsCarry = ((correction << 2) & 0x100) != 0;
 			IsZero = AF.hi == 0;
+			IsHalfCarry = false;
 		}
+		/// <summary>
+		/// Complements A.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is set.
+		/// H is set.
+		/// C is unaffected.
+		/// </remarks>
 		private void CPL()
 		{
 			IsNegativeOp = true;
@@ -2061,150 +2144,328 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region 16-bit Arithmetic
-		private void Inc16(ref ushort reg)
+		/// <summary>
+		/// Increments the given 16-bit register. Takes 4 cycles to complete.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
+		/// <param name="register">The register to increment.</param>
+		private void Inc16(ref ushort register)
 		{
-			reg++;
 			CycleCounter += 4;
+			register++;
 		}
-		private void Dec16(ref ushort reg)
+		/// <summary>
+		/// Decrements the given 16-bit register. Takes 4 cycles to complete.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
+		/// <param name="register">The register to decrement.</param>
+		private void Dec16(ref ushort register)
 		{
-			reg--;
 			CycleCounter += 4;
+			register--;
 		}
-		private void AddHL(ushort refreg)
+		/// <summary>
+		/// Adds the given 16-bit register to HL. Takes 4 cycle to complete.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is reset.
+		/// H is set if there is carry from bit 11.
+		/// C is set if there is carry from bit 15.
+		/// </remarks>
+		/// <param name="register"></param>
+		private void AddHL(ushort register)
 		{
-			int temp = HL.w + refreg;
-			int tempover = HL.w ^ refreg ^ temp;
+			CycleCounter += 4;
+			int temp = HL.w + register;
+			int tempover = HL.w ^ register ^ temp;
 			IsHalfCarry = ((tempover & 0x1000) != 0);
 			IsCarry = ((tempover & 0x10000) != 0);
 			IsNegativeOp = false;
-			HL.w += refreg;
-			CycleCounter += 4;
+			HL.w += register;
 		}
-		private void AddSP(byte refreg)
+		/// <summary>
+		/// Adds the given value (as a signed value) to the Stack Pointer. Takes 8 cycles to complete.
+		/// </summary>
+		/// Z is reset.
+		/// N is reset.
+		/// H is set/reset depending on the operation.
+		/// C is set/reset depending on the operation.
+		/// <param name="value">The value to add.</param>
+		private void AddSP(byte value)
 		{
-			int temp = SP.w + (sbyte)refreg;
-			int tempover = SP.w ^ (sbyte)refreg ^ temp;
-			IsHalfCarry = ((tempover & 0x1000) != 0);
-			IsCarry = ((tempover & 0x10000) != 0);
-			IsNegativeOp = false;
-			IsZero = false;
-			SP.w = (ushort)temp;
 			CycleCounter += 8;
+			int temp = SP.w + (sbyte)value;
+			int tempXOR = SP.w ^ (sbyte)value ^ temp;
+			IsZero = false;
+			IsNegativeOp = false;
+			if ((sbyte)value >= 0)
+			{
+				IsHalfCarry = ((tempXOR & 0x1000) != 0);
+				IsCarry = ((tempXOR & 0x10000) != 0);
+			}
+			else
+			{
+				IsHalfCarry = ((tempXOR & 0x800) != 0);
+				IsCarry = ((tempXOR & 0x8000) != 0);
+			}
+			SP.w = (ushort)temp;
 		}
+		/// <summary>
+		/// Sets HL to SP plus the next value from the PC (as a signed value). Takes 8 cycles to complete.
+		/// </summary>
+		/// <remarks>
+		/// Z is reset.
+		/// N is reset.
+		/// H is set/reset depending on the operation.
+		/// C is set/reset depending on the operation.
+		/// </remarks>
 		private void LdHLSPN()
 		{
-			sbyte offHL = (sbyte)ReadPC();
-			int tempAHL = SP.w + offHL;
-			int tempAHX = SP.w ^ offHL ^ tempAHL;
-			IsHalfCarry = (tempAHX & 0x1000) != 0;
-			IsCarry = (tempAHX & 0x10000) != 0;
-			IsNegativeOp = false;
-			IsZero = false;
-			HL.w = (ushort)tempAHL;
 			CycleCounter += 4;
+			sbyte offHL = (sbyte)ReadPC();
+			int temp = SP.w + offHL;
+			int tempXOR = SP.w ^ offHL ^ temp;
+			IsZero = false;
+			IsNegativeOp = false;
+			if (offHL >= 0)
+			{
+				IsHalfCarry = ((tempXOR & 0x1000) != 0);
+				IsCarry = ((tempXOR & 0x10000) != 0);
+			}
+			else
+			{
+				IsHalfCarry = ((tempXOR & 0x800) != 0);
+				IsCarry = ((tempXOR & 0x8000) != 0);
+			}
+			HL.w = (ushort)temp;
 		}
 		#endregion
 
 		#region Rotate/Shift/Swap
-		private void Swap(ref byte val)
+		/// <summary>
+		/// Swaps the lower and upper nibble of the given register.
+		/// </summary>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C is reset.
+		/// <param name="register">The register to swap.</param>
+		private void Swap(ref byte register)
 		{
-			IsNegativeOp = IsHalfCarry = IsCarry = false;
-			IsZero = val == 0;
-			val = (byte)((val << 4) | (val >> 4));
+			IsZero = register == 0;
+			IsNegativeOp = false;
+			IsHalfCarry = false;
+			IsCarry = false;
+			register = (byte)((register << 4) | (register >> 4));
 		}
-		private void RL(ref byte val)
+		/// <summary>
+		/// Rotates the given register left, with the carry bit as an extra position.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 7.
+		/// </remarks>
+		/// <param name="register">The register to rotate.</param>
+		private void RL(ref byte register)
 		{
+			IsNegativeOp = false;
+			IsHalfCarry = false;
 			byte carry = (byte)(IsCarry ? 1 : 0);
-			IsCarry = (val & 0x80) != 0;
-			val = (byte)(val << 1 | carry);
-			IsZero = val == 0;
+			IsCarry = (register & 0x80) != 0;
+			register = (byte)((register << 1) | carry);
+			IsZero = register == 0;
 		}
-		private void RR(ref byte val)
+		/// <summary>
+		/// Rotates the given register right, with the carry bit as an extra position.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 0.
+		/// </remarks>
+		/// <param name="register">The register to rotate.</param>
+		private void RR(ref byte register)
 		{
+			IsNegativeOp = false;
+			IsHalfCarry = false;
 			byte carry = (byte)(IsCarry ? 0x80 : 0);
-			IsCarry = (val & 0x1) != 0;
-			val = (byte)(val >> 1 | carry);
-			IsZero = val == 0;
+			IsCarry = (register & 0x1) != 0;
+			register = (byte)((register >> 1) | carry);
+			IsZero = register == 0;
 		}
-		private void RLC(ref byte val)
+		/// <summary>
+		/// Rotates the given register left, ignoring the carry bit.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 7.
+		/// </remarks>
+		/// <param name="register">The register to rotate.</param>
+		private void RLC(ref byte register)
 		{
-			IsCarry = (val & 0x80) != 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
-			val = (byte)(val << 1 | val >> 7);
-			IsZero = val == 0;
+			IsCarry = (register & 0x80) != 0;
+			register = (byte)((register << 1) | (register >> 7));
+			IsZero = (register == 0);
 		}
-		private void RRC(ref byte val)
+		/// <summary>
+		/// Rotates the given register right, ignoring the carry bit.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 0.
+		/// </remarks>
+		/// <param name="register">The register to rotate.</param>
+		private void RRC(ref byte register)
 		{
-			IsCarry = (val & 0x1) != 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
-			val = (byte)(val >> 1 | val << 7);
-			IsZero = (val == 0);
+			IsCarry = (register & 0x1) != 0;
+			register = (byte)((register >> 1) | (register << 7));
+			IsZero = (register == 0);
 		}
-		private void SLA(ref byte val)
+		/// <summary>
+		/// Shifts the given register to the left. LSB becomes 0.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 7.
+		/// </remarks>
+		/// <param name="register">The register to shift.</param>
+		private void SLA(ref byte register)
 		{
-			IsCarry = (val & 0x80) != 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
-			val <<= 1;
-			IsZero = val == 0;
+			IsCarry = (register & 0x80) != 0;
+			register <<= 1;
+			IsZero = register == 0;
 		}
-		private void SRA(ref byte val)
+		/// <summary>
+		/// Shifts the given register to the right. MSB stays the same (arithmetic shift).
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 0.
+		/// </remarks>
+		/// <param name="register">The register to shift.</param>
+		private void SRA(ref byte register)
 		{
-			IsCarry = (val & 0x1) != 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
-			val = (byte)((val >> 1) | (val & 0x80));
-			IsZero = val == 0;
+			IsCarry = (register & 0x1) != 0;
+			register = (byte)((register >> 1) | (register & 0x80));
+			IsZero = (register == 0);
 		}
-		private void SRL(ref byte val)
+		/// <summary>
+		/// Shifts the given register to the right. MSB becomes 0.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is reset.
+		/// C contains the data that was in bit 0.
+		/// </remarks>
+		/// <param name="register">The register to shift.</param>
+		private void SRL(ref byte register)
 		{
-			IsCarry = (val & 0x1) != 0;
 			IsNegativeOp = false;
 			IsHalfCarry = false;
-			val >>= 1;
-			IsZero = val == 0;
+			IsCarry = (register & 0x1) != 0;
+			register >>= 1;
+			IsZero = (register == 0);
 		}
 		#endregion
 
 		#region Bit Operations
-		private void Bit(byte val, int bit)
+		/// <summary>
+		/// Tests the bit of the given register.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if the specific bit is 0.
+		/// N is reset.
+		/// H is set.
+		/// C is unaffected.
+		/// </remarks>
+		/// <param name="register">The register to use.</param>
+		/// <param name="bitNumber">The bit number to test.</param>
+		private void Bit(byte register, int bitNumber)
 		{
 			IsNegativeOp = false;
 			IsHalfCarry = true;
-			IsZero = (val & (1 << bit)) == 0;
+			IsZero = (register & (1 << bitNumber)) == 0;
 		}
-		private void Set(ref byte val, int bit)
+		/// <summary>
+		/// Sets the bit of the given register.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
+		/// <param name="register">The register to use.</param>
+		/// <param name="bitNumber">The bit number to set.</param>
+		private void Set(ref byte register, int bitNumber)
 		{
-			byte[] setBits = new byte[8]
-			{
-				1, 2, 4, 8, 16, 32, 64, 128
-			};
-			val |= setBits[bit];
+			register |= (byte)(1 << bitNumber);
 		}
-		private void Reset(ref byte val, int bit)
+		/// <summary>
+		/// Resets the bit of the given register.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
+		/// <param name="register">The register to use.</param>
+		/// <param name="bitNumber">The bit number to reset.</param>
+		private void Reset(ref byte register, int bitNumber)
 		{
-			byte[] resetBits = new byte[8]
-			{
-				0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7F
-			};
-			val &= resetBits[bit];
+			register &= (byte)(~(1 << bitNumber));
 		}
 		#endregion
 
 		#region Jump/Call/Return
-		private void Jump(bool isCondTrue)
+		/// <summary>
+		/// Jumps to the location at the next word read from the PC. Takes 8 cycles (!isCondTrue) or 12 cycles to complete.
+		/// </summary>
+		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
+		private void JumpImmediate(bool isCondTrue)
 		{
-			Register jl = new Register();
-			jl.lo = ReadPC();
-			jl.hi = ReadPC();
+			ushort x = ReadPCWord();
 			if (isCondTrue)
 			{
-				PCChange(jl.w);
+				PCChange(x);
 			}
 		}
+		/// <summary>
+		/// Jumps to a relative offset specified from the PC. Takes 4 cycles (!isCondTrue) or 8 cycles to complete.
+		/// </summary>
+		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void JumpRelative(bool isCondTrue)
 		{
 			sbyte off = (sbyte)ReadPC();
@@ -2213,35 +2474,47 @@ namespace GBEmu.Emulator
 				PCChange((ushort)(PC.w + off));
 			}
 		}
-		private void Call(bool isFlag)
+		/// <summary>
+		/// Reads the next address, pushes the PC onto the stack, and jumps to the new address. Takes 8 cycles (!isCondTrue) or 20 cycles to complete. 
+		/// </summary>
+		/// <param name="IsCondTrue">Conditional check on call (Ex: IsCarry)</param>
+		private void Call(bool IsCondTrue)
 		{
-			Register rf = new Register();
-			rf.lo = ReadPC();
-			rf.hi = ReadPC();
-			if (isFlag)
+			ushort x = ReadPCWord();
+			if (IsCondTrue)
 			{
 				Push(PC.w);
-				PCChange(rf.w);
+				PC.w = x;
 			}
 		}
+		/// <summary>
+		/// Pops an address off the stack, and sets the PC. This takes 12 cycles to complete.
+		/// </summary>
+		/// <param name="enableInterrupts">Set if this is a RETI instruction.</param>
 		private void Return(bool enableInterrupts)
 		{
-			ushort retAddr = 0;
-			Pop(ref retAddr);
-			PCChange(retAddr);
+			ushort w = 0;
+			Pop(ref w);
+			PCChange(w);
 			state = CPUState.Normal;
 			if (enableInterrupts) interruptManager.EnableInterrupts();
 		}
+		/// <summary>
+		/// "Returns" if the condition is true. This takes 4 cycles (!isCondTrue) or 16 cycles to complete.
+		/// </summary>
+		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void CheckedReturn(bool isCondTrue)
 		{
 			CycleCounter += 4;
 			if (isCondTrue)
 			{
-				ushort retAddr = 0;
-				Pop(ref retAddr);
-				PCChange(retAddr);
+				Return(false);
 			}
 		}
+		/// <summary>
+		/// Pushes the current address and jumps to the given jump vector. Takes 16 cycles to complete.
+		/// </summary>
+		/// <param name="jumpVector">The vector to jump to.</param>
 		private void RST(byte jumpVector)
 		{
 			Push(PC.w);
@@ -2250,6 +2523,9 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region CPU Commands
+		/// <summary>
+		/// Halts the CPU.
+		/// </summary>
 		private void Halt()
 		{
 			if (interruptManager.InterruptsEnabled())
@@ -2263,70 +2539,84 @@ namespace GBEmu.Emulator
 				RepeatLastInstruction = true;
 			}
 		}
+		/// <summary>
+		/// Stops the CPU.
+		/// </summary>
 		private void Stop()
 		{
 			//state = CPUState.Stop;
 			PC.w++;
 		}
+		/// <summary>
+		/// Disables interrupts.
+		/// </summary>
 		private void DI()
 		{
 			interruptManager.DisableInterrupts();
 		}
+		/// <summary>
+		/// Enables interrupts.
+		/// </summary>
 		private void EI()
 		{
 			interruptManager.EnableInterrupts();
 		}
+		/// <summary>
+		/// Complements the carry flag.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is reset.
+		/// H is reset.
+		/// C is flipped.
+		/// </remarks>
 		private void CCF()
 		{
-			IsCarry = !IsCarry;
 			IsHalfCarry = false;
 			IsNegativeOp = false;
+			IsCarry = !IsCarry;
 		}
+		/// <summary>
+		/// Sets the carry flag.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is reset.
+		/// H is reset.
+		/// C is set.
+		/// </remarks>
 		private void SCF()
 		{
-			IsCarry = true;
-			IsHalfCarry = false;
 			IsNegativeOp = false;
+			IsHalfCarry = false;
+			IsCarry = true;
 		}
 		#endregion
 
 		#region Stack Commands
+		/// <summary>
+		/// Pushes a given word to the stack. Takes 12 cycles to complete.
+		/// </summary>
+		/// <param name="pushData">The word to push.</param>
 		private void Push(ushort pushData)
 		{
+			CycleCounter += 4;
+			SP.w--;
 			WriteMMU(SP.w, (byte)(pushData >> 8));
 			SP.w--;
 			WriteMMU(SP.w, (byte)pushData);
-			SP.w--;
 		}
-		private void Pop(ref ushort popReg)
+
+		/// <summary>
+		/// Pops a word off the stack to the given location. Takes 8 cycles to complete.
+		/// </summary>
+		/// <param name="popLoc">The location to pop to.</param>
+		private void Pop(ref ushort popLoc)
 		{
 			ushort x = ReadSP();
 			x |= (ushort)(ReadSP() << 8);
-			popReg = x;
+			popLoc = x;
 		}
-		#endregion
-
-		#region Load Commands
-		private void LoadImmediate(ref byte reg)
-		{
-			reg = ReadPC();
-		}
-		private void LoadFromMemory(ref byte reg, ushort dest)
-		{
-			reg = ReadMMU(dest);
-		}
-		private void Load16Immediate(ref Register reg)
-		{
-			reg.lo = ReadPC();
-			reg.hi = ReadPC();
-		}
-		private void LoadHL(byte val, LoadHLType type)
-		{
-			WriteMMU(HL.w, val);
-			if (type == LoadHLType.Inc) HL.w++;
-			else if (type == LoadHLType.Dec) HL.w--;
-		}
-		private enum LoadHLType { None, Inc, Dec }
 		#endregion
 		#endregion
 	}

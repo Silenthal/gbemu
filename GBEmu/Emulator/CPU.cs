@@ -167,7 +167,9 @@ namespace GBEmu.Emulator
 			RepeatLastInstruction = false;
 		}
 
-		public void step(int cycles)
+		public delegate void Writeback(int pos);
+
+		public void step(int cycles, Writeback wr)
 		{
 			while (cycles > 0)
 			{
@@ -181,6 +183,7 @@ namespace GBEmu.Emulator
 						CycleCounter += 4;
 						break;
 					case CPUState.Normal:
+						wr(PC.w);
 						byte inst = ReadPC();
 						if (RepeatLastInstruction)//Halt bug
 						{
@@ -196,7 +199,7 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref BC);
 								break;
 							case 0x02://ld [bc],a
-								Write(BC.w, AF.hi);
+								WriteMMU(BC.w, AF.hi);
 								break;
 							case 0x03://inc bc
 								Inc16(ref BC.w);
@@ -246,7 +249,7 @@ namespace GBEmu.Emulator
 								Load16Immediate(ref DE);
 								break;
 							case 0x12://ld [de],a
-								Write(DE.w, AF.hi);
+								WriteMMU(DE.w, AF.hi);
 								break;
 							case 0x13://inc de
 								Inc16(ref DE.w);
@@ -320,7 +323,7 @@ namespace GBEmu.Emulator
 								AddHL(HL.w);
 								break;
 							case 0x2A://ldi a,[hl]
-								AF.hi = Read(HL.w);
+								AF.hi = ReadMMU(HL.w);
 								HL.w++;
 								break;
 							case 0x2B://dec hl
@@ -371,7 +374,7 @@ namespace GBEmu.Emulator
 								AddHL(SP.w);
 								break;
 							case 0x3A://ldd a,[hl]
-								AF.hi = Read(HL.w);
+								AF.hi = ReadMMU(HL.w);
 								HL.w--;
 								break;
 							case 0x3B://dec sp
@@ -409,7 +412,7 @@ namespace GBEmu.Emulator
 								BC.hi = HL.lo;
 								break;
 							case 0x46://ld b,[hl]
-								BC.hi = Read(HL.w);
+								BC.hi = ReadMMU(HL.w);
 								break;
 							case 0x47://ld b,a
 								BC.hi = AF.hi;
@@ -432,7 +435,7 @@ namespace GBEmu.Emulator
 								BC.lo = HL.lo;
 								break;
 							case 0x4E://ld c,[hl]
-								BC.lo = Read(HL.w);
+								BC.lo = ReadMMU(HL.w);
 								break;
 							case 0x4F://ld c,a
 								BC.lo = AF.hi;
@@ -457,7 +460,7 @@ namespace GBEmu.Emulator
 								DE.hi = HL.lo;
 								break;
 							case 0x56://ld d,[hl]
-								DE.hi = Read(HL.w);
+								DE.hi = ReadMMU(HL.w);
 								break;
 							case 0x57://ld d,a
 								DE.hi = AF.hi;
@@ -480,7 +483,7 @@ namespace GBEmu.Emulator
 								DE.lo = HL.lo;
 								break;
 							case 0x5E://ld e,[hl]
-								DE.lo = Read(HL.w);
+								DE.lo = ReadMMU(HL.w);
 								break;
 							case 0x5F://ld e,a
 								DE.lo = AF.hi;
@@ -505,7 +508,7 @@ namespace GBEmu.Emulator
 								HL.hi = HL.lo;
 								break;
 							case 0x66://ld h,[hl]
-								HL.hi = Read(HL.w);
+								HL.hi = ReadMMU(HL.w);
 								break;
 							case 0x67://ld h,a
 								HL.hi = AF.hi;
@@ -528,7 +531,7 @@ namespace GBEmu.Emulator
 							case 0x6D://ld l,l
 								break;
 							case 0x6E://ld l,[hl]
-								HL.lo = Read(HL.w);
+								HL.lo = ReadMMU(HL.w);
 								break;
 							case 0x6F://ld l,a
 								HL.lo = AF.hi;
@@ -536,28 +539,28 @@ namespace GBEmu.Emulator
 							#endregion
 							#region Ops 0x70-0x7F
 							case 0x70://ld [hl],b
-								Write(HL.w, BC.hi);
+								WriteMMU(HL.w, BC.hi);
 								break;
 							case 0x71://ld [hl],c
-								Write(HL.w, BC.lo);
+								WriteMMU(HL.w, BC.lo);
 								break;
 							case 0x72://ld [hl],d
-								Write(HL.w, DE.hi);
+								WriteMMU(HL.w, DE.hi);
 								break;
 							case 0x73://ld [hl],e
-								Write(HL.w, DE.lo);
+								WriteMMU(HL.w, DE.lo);
 								break;
 							case 0x74://ld [hl],h
-								Write(HL.w, HL.hi);
+								WriteMMU(HL.w, HL.hi);
 								break;
 							case 0x75://ld [hl],l
-								Write(HL.w, HL.lo);
+								WriteMMU(HL.w, HL.lo);
 								break;
 							case 0x76://halt
 								Halt();
 								break;
 							case 0x77://ld [hl],a
-								Write(HL.w, AF.hi);
+								WriteMMU(HL.w, AF.hi);
 								break;
 							case 0x78://ld a,b
 								AF.hi = BC.hi;
@@ -578,7 +581,7 @@ namespace GBEmu.Emulator
 								AF.hi = HL.lo;
 								break;
 							case 0x7E://ld a,hl
-								AF.hi = Read(HL.w);
+								AF.hi = ReadMMU(HL.w);
 								break;
 							case 0x7F://ld a,a
 								break;
@@ -603,7 +606,7 @@ namespace GBEmu.Emulator
 								AddA(HL.lo, false);
 								break;
 							case 0x86://add a,[hl]
-								AddA(Read(HL.w), false);
+								AddA(ReadMMU(HL.w), false);
 								break;
 							case 0x87://add a,a
 								AddA(AF.hi, false);
@@ -627,7 +630,7 @@ namespace GBEmu.Emulator
 								AddA(HL.lo, true);
 								break;
 							case 0x8E://adc a,[hl]
-								AddA(Read(HL.w), true);
+								AddA(ReadMMU(HL.w), true);
 								break;
 							case 0x8F://adc a,a
 								AddA(AF.hi, true);
@@ -653,7 +656,7 @@ namespace GBEmu.Emulator
 								SubA(HL.lo, false);
 								break;
 							case 0x96://sub a,[hl]
-								SubA(Read(HL.w), false);
+								SubA(ReadMMU(HL.w), false);
 								break;
 							case 0x97://sub a,a
 								SubA(AF.hi, false);
@@ -677,7 +680,7 @@ namespace GBEmu.Emulator
 								SubA(HL.lo, true);
 								break;
 							case 0x9E://sbc a,[hl]
-								SubA(Read(HL.w), true);
+								SubA(ReadMMU(HL.w), true);
 								break;
 							case 0x9F://sbc a,a
 								SubA(AF.hi, true);
@@ -703,7 +706,7 @@ namespace GBEmu.Emulator
 								AndA(HL.lo);
 								break;
 							case 0xA6://and a,[hl]
-								AndA(Read(HL.w));
+								AndA(ReadMMU(HL.w));
 								break;
 							case 0xA7://and a,a
 								AndA(AF.hi);
@@ -727,7 +730,7 @@ namespace GBEmu.Emulator
 								XorA(HL.lo);
 								break;
 							case 0xAE://xor a,[hl]
-								XorA(Read(HL.w));
+								XorA(ReadMMU(HL.w));
 								break;
 							case 0xAF://xor a,a
 								XorA(AF.hi);
@@ -753,7 +756,7 @@ namespace GBEmu.Emulator
 								OrA(HL.lo);
 								break;
 							case 0xB6://or a,[hl]
-								OrA(Read(HL.w));
+								OrA(ReadMMU(HL.w));
 								break;
 							case 0xB7://or a,a
 								OrA(AF.hi);
@@ -777,7 +780,7 @@ namespace GBEmu.Emulator
 								CpA(HL.lo);
 								break;
 							case 0xBE://cp a,[hl]
-								CpA(Read(HL.w));
+								CpA(ReadMMU(HL.w));
 								break;
 							case 0xBF://cp a,a
 								CpA(AF.hi);
@@ -884,7 +887,7 @@ namespace GBEmu.Emulator
 							case 0xE0://ld [$ffnn],a
 								ushort ldaddress = 0xFF00;
 								ldaddress |= ReadPC();
-								Write(ldaddress, AF.hi);
+								WriteMMU(ldaddress, AF.hi);
 								break;
 							case 0xE1://pop hl
 								Pop(ref HL.w);
@@ -892,7 +895,7 @@ namespace GBEmu.Emulator
 							case 0xE2://ld [c],a
 								ushort ldcaddress = 0xFF00;
 								ldcaddress |= BC.lo;
-								Write(ldcaddress, AF.hi);
+								WriteMMU(ldcaddress, AF.hi);
 								break;
 							case 0xE3://--
 								break;
@@ -914,9 +917,7 @@ namespace GBEmu.Emulator
 								PC.w = HL.w;
 								break;
 							case 0xEA://ld [$nnnn],a
-								Register temp = new Register();
-								Load16Immediate(ref temp);
-								Write(temp.w, AF.hi);
+								WriteWord(ReadPCWord(), AF.hi);
 								break;
 							case 0xEB://--
 								break;
@@ -935,7 +936,7 @@ namespace GBEmu.Emulator
 							case 0xF0://ld a,[$ffnn]
 								ushort nnAddress = 0xFF00;
 								nnAddress |= ReadPC();
-								AF.hi = Read(nnAddress);
+								AF.hi = ReadMMU(nnAddress);
 								break;
 							case 0xF1://pop af
 								Pop(ref AF.w);
@@ -943,7 +944,7 @@ namespace GBEmu.Emulator
 							case 0xF2://ld a,[c]
 								ushort ldrcaddress = 0xFF00;
 								ldrcaddress |= BC.lo;
-								AF.hi = Read(ldrcaddress);
+								AF.hi = ReadMMU(ldrcaddress);
 								break;
 							case 0xF3://di
 								interruptManager.DisableInterrupts();
@@ -969,7 +970,7 @@ namespace GBEmu.Emulator
 							case 0xFA://ld a,[nnnn]
 								Register tempLoc = new Register();
 								Load16Immediate(ref tempLoc);
-								AF.hi = Read(tempLoc.w);
+								AF.hi = ReadMMU(tempLoc.w);
 								break;
 							case 0xFB://ei
 								interruptManager.EnableInterrupts();
@@ -1017,9 +1018,9 @@ namespace GBEmu.Emulator
 					RLC(ref HL.lo);
 					break;
 				case 0x06://rlc [hl]
-					byte rlchl = Read(HL.w);
+					byte rlchl = ReadMMU(HL.w);
 					RLC(ref rlchl);
-					Write(HL.w, rlchl);
+					WriteMMU(HL.w, rlchl);
 					break;
 				case 0x07://rlc a
 					RLC(ref AF.hi);
@@ -1045,9 +1046,9 @@ namespace GBEmu.Emulator
 					RRC(ref HL.lo);
 					break;
 				case 0x0E://rrc [hl]
-					byte rrchl = Read(HL.w);
+					byte rrchl = ReadMMU(HL.w);
 					RRC(ref rrchl);
-					Write(HL.w, rrchl);
+					WriteMMU(HL.w, rrchl);
 					break;
 				case 0x0F://rrc a
 					RRC(ref AF.hi);
@@ -1073,9 +1074,9 @@ namespace GBEmu.Emulator
 					RL(ref HL.lo);
 					break;
 				case 0x16://rl [hl]
-					byte rlhl = Read(HL.w);
+					byte rlhl = ReadMMU(HL.w);
 					RL(ref rlhl);
-					Write(HL.w, rlhl);
+					WriteMMU(HL.w, rlhl);
 					break;
 				case 0x17://rl a
 					RL(ref AF.hi);
@@ -1101,9 +1102,9 @@ namespace GBEmu.Emulator
 					RR(ref HL.lo);
 					break;
 				case 0x1E://rr [hl]
-					byte rrhl = Read(HL.w);
+					byte rrhl = ReadMMU(HL.w);
 					RR(ref rrhl);
-					Write(HL.w, rrhl);
+					WriteMMU(HL.w, rrhl);
 					break;
 				case 0x1F://rr a
 					RR(ref AF.hi);
@@ -1129,9 +1130,9 @@ namespace GBEmu.Emulator
 					SLA(ref HL.lo);
 					break;
 				case 0x26://sla [hl]
-					byte slahl = Read(HL.w);
+					byte slahl = ReadMMU(HL.w);
 					SLA(ref slahl);
-					Write(HL.w, slahl);
+					WriteMMU(HL.w, slahl);
 					break;
 				case 0x27://sla a
 					SLA(ref AF.hi);
@@ -1157,9 +1158,9 @@ namespace GBEmu.Emulator
 					SRA(ref HL.lo);
 					break;
 				case 0x2E://sra [hl]
-					byte srahl = Read(HL.w);
+					byte srahl = ReadMMU(HL.w);
 					SRA(ref srahl);
-					Write(HL.w, srahl);
+					WriteMMU(HL.w, srahl);
 					break;
 				case 0x2F://sra a
 					SRA(ref AF.hi);
@@ -1185,9 +1186,9 @@ namespace GBEmu.Emulator
 					Swap(ref HL.lo);
 					break;
 				case 0x36://swap [hl]
-					byte swaphl = Read(HL.w);
+					byte swaphl = ReadMMU(HL.w);
 					Swap(ref swaphl);
-					Write(HL.w, swaphl);
+					WriteMMU(HL.w, swaphl);
 					break;
 				case 0x37://swap a
 					Swap(ref AF.hi);
@@ -1213,9 +1214,9 @@ namespace GBEmu.Emulator
 					SRL(ref HL.lo);
 					break;
 				case 0x3E://srl [hl]
-					byte srlHL = Read(HL.w);
+					byte srlHL = ReadMMU(HL.w);
 					SRL(ref srlHL);
-					Write(HL.w, srlHL);
+					WriteMMU(HL.w, srlHL);
 					break;
 				case 0x3F://srl a
 					SRL(ref AF.hi);
@@ -1241,7 +1242,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 0);
 					break;
 				case 0x46://bit 0, [hl]
-					Bit(Read(HL.w), 0);
+					Bit(ReadMMU(HL.w), 0);
 					break;
 				case 0x47://bit 0, a
 					Bit(AF.hi, 0);
@@ -1265,7 +1266,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 1);
 					break;
 				case 0x4E://bit 1, hl
-					Bit(Read(HL.w), 1);
+					Bit(ReadMMU(HL.w), 1);
 					break;
 				case 0x4F://bit 1, a
 					Bit(AF.hi, 1);
@@ -1289,7 +1290,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 2);
 					break;
 				case 0x56://bit 2, hl
-					Bit(Read(HL.w), 2);
+					Bit(ReadMMU(HL.w), 2);
 					break;
 				case 0x57://bit 2, a
 					Bit(AF.hi, 2);
@@ -1313,7 +1314,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 3);
 					break;
 				case 0x5E://bit 3, hl
-					Bit(Read(HL.w), 3);
+					Bit(ReadMMU(HL.w), 3);
 					break;
 				case 0x5F://bit 3, a
 					Bit(AF.hi, 3);
@@ -1337,7 +1338,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 4);
 					break;
 				case 0x66://bit 4, hl
-					Bit(Read(HL.w), 4);
+					Bit(ReadMMU(HL.w), 4);
 					break;
 				case 0x67://bit 4, a
 					Bit(AF.hi, 4);
@@ -1361,7 +1362,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 5);
 					break;
 				case 0x6E://bit 5, hl
-					Bit(Read(HL.w), 5);
+					Bit(ReadMMU(HL.w), 5);
 					break;
 				case 0x6F://bit 5, a
 					Bit(AF.hi, 5);
@@ -1385,7 +1386,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 6);
 					break;
 				case 0x76://bit 6, hl
-					Bit(Read(HL.w), 6);
+					Bit(ReadMMU(HL.w), 6);
 					break;
 				case 0x77://bit 6, a
 					Bit(AF.hi, 6);
@@ -1409,7 +1410,7 @@ namespace GBEmu.Emulator
 					Bit(HL.lo, 7);
 					break;
 				case 0x7E://bit 7, [hl]
-					Bit(Read(HL.w), 7);
+					Bit(ReadMMU(HL.w), 7);
 					break;
 				case 0x7F://bit 7, a
 					Bit(AF.hi, 7);
@@ -1435,7 +1436,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 0);
 					break;
 				case 0x86://res 0, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_0));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_0));
 					break;
 				case 0x87://res 0, a
 					Reset(ref AF.hi, 0);
@@ -1459,7 +1460,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 1);
 					break;
 				case 0x8E://res 1, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_1));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_1));
 					break;
 				case 0x8F://res 1, a
 					Reset(ref AF.hi, 1);
@@ -1483,7 +1484,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 2);
 					break;
 				case 0x96://res 2, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_2));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_2));
 					break;
 				case 0x97://res 2, a
 					Reset(ref AF.hi, 2);
@@ -1507,7 +1508,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 3);
 					break;
 				case 0x9E://res 3, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_3));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_3));
 					break;
 				case 0x9F://res 3, a
 					Reset(ref AF.hi, 3);
@@ -1531,7 +1532,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 4);
 					break;
 				case 0xA6://res 4, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_4));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_4));
 					break;
 				case 0xA7://res 4, a
 					Reset(ref AF.hi, 4);
@@ -1555,7 +1556,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 5);
 					break;
 				case 0xAE://res 5, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_5));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_5));
 					break;
 				case 0xAF://res 5, a
 					Reset(ref AF.hi, 5);
@@ -1579,7 +1580,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 6);
 					break;
 				case 0xB6://res 6, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_6));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_6));
 					break;
 				case 0xB7://res 6, a
 					Reset(ref AF.hi, 6);
@@ -1603,7 +1604,7 @@ namespace GBEmu.Emulator
 					Reset(ref HL.lo, 7);
 					break;
 				case 0xBE://res 7, [hl]
-					Write(HL.w, (byte)(Read(HL.w) & RESET_7));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_7));
 					break;
 				case 0xBF://res 7, a
 					Reset(ref AF.hi, 7);
@@ -1629,7 +1630,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 0);
 					break;
 				case 0xC6://set 0, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_0));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_0));
 					break;
 				case 0xC7://set 0, a
 					Set(ref AF.hi, 0);
@@ -1653,7 +1654,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 1);
 					break;
 				case 0xCE://set 1, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_1));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_1));
 					break;
 				case 0xCF://set 1, a
 					Set(ref AF.hi, 1);
@@ -1677,7 +1678,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 2);
 					break;
 				case 0xD6://set 2, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_2));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_2));
 					break;
 				case 0xD7://set 2, a
 					Set(ref AF.hi, 2);
@@ -1701,7 +1702,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 3);
 					break;
 				case 0xDE://set 3, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_3));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_3));
 					break;
 				case 0xDF://set 3, a
 					Set(ref AF.hi, 3);
@@ -1725,7 +1726,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 4);
 					break;
 				case 0xE6://set 4, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_4));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_4));
 					break;
 				case 0xE7://set 4, a
 					Set(ref AF.hi, 4);
@@ -1749,7 +1750,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 5);
 					break;
 				case 0xEE://set 5, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_5));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_5));
 					break;
 				case 0xEF://set 5, a
 					Set(ref AF.hi, 5);
@@ -1773,7 +1774,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 6);
 					break;
 				case 0xF6://set 6, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_6));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_6));
 					break;
 				case 0xF7://set 6, a
 					Set(ref AF.hi, 6);
@@ -1797,7 +1798,7 @@ namespace GBEmu.Emulator
 					Set(ref HL.lo, 7);
 					break;
 				case 0xFE://set 7, [hl]
-					Write(HL.w, (byte)(Read(HL.w) | SET_7));
+					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_7));
 					break;
 				case 0xFF://set 7, a
 					Set(ref AF.hi, 7);
@@ -1839,85 +1840,145 @@ namespace GBEmu.Emulator
 		}
 
 		#region Reading and writing
-		private byte Read(ushort src)
+		/// <summary>
+		/// Read a byte from the MMU.
+		/// </summary>
+		/// <remarks>
+		/// This operation takes 4 cycles.
+		/// </remarks>
+		/// <param name="address">The address of the source.</param>
+		/// <returns>The byte at the address, or 0xFF if the read failed.</returns>
+		private byte ReadMMU(ushort address)
 		{
 			CycleCounter += 4;
-			return mmu.Read(src);
+			return mmu.Read(address);
 		}
-		private ushort ReadWord(ushort src)
+		/// <summary>
+		/// Writes a byte to a given address.
+		/// </summary>
+		/// <remarks>
+		/// This operation takes 4 cycles.
+		/// </remarks>
+		/// <param name="address">The address of the destination.</param>
+		/// <param name="data">The byte to write.</param>
+		private void WriteMMU(ushort address, byte data)
 		{
-			ushort ret = Read(src);
-			src++;
-			ret |= (ushort)(Read(src) << 8);
-			return ret;
+			CycleCounter += 4;
+			mmu.Write(address, data);
 		}
+		/// <summary>
+		/// Reads a word, using the Program Counter as an address.
+		/// </summary>
+		/// <returns>The little-endian word at the address</returns>
 		private ushort ReadPCWord()
 		{
-			ushort ret = ReadPC();
-			ret |= (ushort)(ReadPC() << 8);
-			return ret;
+			Register ret = new Register() { lo = ReadPC() };
+			ret.hi = ReadPC();
+			return ret.w;
 		}
+		/// <summary>
+		/// Reads a byte, using the Program Counter as an address.
+		/// </summary>
+		/// <returns>The byte at the address.</returns>
 		private byte ReadPC()
 		{
-			byte read = Read(PC.w);
+			byte read = ReadMMU(PC.w);
 			PC.w++;
 			return read;
 		}
+		/// <summary>
+		/// Reads a byte, using the Stack Pointer as an address.
+		/// </summary>
+		/// <returns>The byte at the address.</returns>
 		private byte ReadSP()
 		{
-			byte read = Read(SP.w);
+			byte read = ReadMMU(SP.w);
 			SP.w++;
 			return read;
 		}
-		private void Write(ushort dest, byte data)
-		{
-			CycleCounter += 4;
-			mmu.Write(dest, data);
-		}
+		/// <summary>
+		/// Writes a little-endian word to the given address.
+		/// </summary>
+		/// <param name="dest">The address of the destination.</param>
+		/// <param name="data">The word to write.</param>
 		private void WriteWord(ushort dest, ushort data)
 		{
-			Write(dest, (byte)data);
+			WriteMMU(dest, (byte)(data & 0xFF));
 			dest++;
-			Write(dest, (byte)(data >> 8));
+			WriteMMU(dest, (byte)((data >> 8) & 0xFF));
 		}
-		private void PCChange(ushort newVal)
+		/// <summary>
+		/// Changes the Program Counter to point to a new location.
+		/// </summary>
+		/// <param name="newAddress">The new address the PC will point to.</param>
+		private void PCChange(ushort newAddress)
 		{
-			PC.w = newVal;
 			CycleCounter += 4;
+			PC.w = newAddress;
 		}
 		#endregion
 
 		#region Instruction Implementation
 		#region 8-bit Arithmetic
-		private void Inc8(ref byte refreg)
+		/// <summary>
+		/// Increments the given 8-bit register.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is reset.
+		/// H is set if there is carry from bit 3.
+		/// C is not affected.
+		/// </remarks>
+		/// <param name="register">The register to increment.</param>
+		private void Inc8(ref byte register)
 		{
-			int temp = refreg + 1;
-			int tempover = refreg ^ 1 ^ temp;
+			CycleCounter += 4;
+			int temp = register + 1;
+			int tempover = register ^ 1 ^ temp;
 			IsHalfCarry = ((tempover & 0x10) != 0);
 			IsNegativeOp = false;
-			refreg++;
-			IsZero = (refreg == 0);
+			register++;
+			IsZero = (register == 0);
 		}
-		private void Dec8(ref byte refreg)
+		/// <summary>
+		/// Decrements the given 8-bit register.
+		/// </summary>
+		/// <remarks>
+		/// Z is set if result is zero.
+		/// N is set.
+		/// H is set if there is carry from bit 4.
+		/// C is not affected.
+		/// </remarks>
+		/// <param name="register">The register to decrement.</param>
+		private void Dec8(ref byte register)
 		{
-			int temp = refreg - 1;
-			int tempover = refreg ^ 0xFF ^ temp;
-			IsHalfCarry = ((tempover & 0x10) != 0);
+			int temp = register - 1;
+			int tempover = register ^ -1 ^ temp;
+			IsHalfCarry = ((tempover & 0xF) != 0);
 			IsNegativeOp = true;
-			refreg--;
-			IsZero = (refreg == 0);
+			register--;
+			IsZero = (register == 0);
 		}
+		/// <summary>
+		/// Increments the given 16-bit register pair.
+		/// </summary>
+		/// <remarks>
+		/// Z is unaffected.
+		/// N is unaffected.
+		/// H is unaffected.
+		/// C is unaffected.
+		/// </remarks>
 		private void IncHL()
 		{
-			byte incHL = Read(HL.w);
+			byte incHL = ReadMMU(HL.w);
 			incHL++;
-			Write(HL.w, incHL);
+			WriteMMU(HL.w, incHL);
 		}
 		private void DecHL()
 		{
-			byte decHL = Read(HL.w);
+			byte decHL = ReadMMU(HL.w);
 			decHL--;
-			Write(HL.w, decHL);
+			WriteMMU(HL.w, decHL);
 		}
 		private void AddA(byte add, bool addCarry)
 		{
@@ -2232,9 +2293,9 @@ namespace GBEmu.Emulator
 		#region Stack Commands
 		private void Push(ushort pushData)
 		{
-			Write(SP.w, (byte)(pushData >> 8));
+			WriteMMU(SP.w, (byte)(pushData >> 8));
 			SP.w--;
-			Write(SP.w, (byte)pushData);
+			WriteMMU(SP.w, (byte)pushData);
 			SP.w--;
 		}
 		private void Pop(ref ushort popReg)
@@ -2252,7 +2313,7 @@ namespace GBEmu.Emulator
 		}
 		private void LoadFromMemory(ref byte reg, ushort dest)
 		{
-			reg = Read(dest);
+			reg = ReadMMU(dest);
 		}
 		private void Load16Immediate(ref Register reg)
 		{
@@ -2261,7 +2322,7 @@ namespace GBEmu.Emulator
 		}
 		private void LoadHL(byte val, LoadHLType type)
 		{
-			Write(HL.w, val);
+			WriteMMU(HL.w, val);
 			if (type == LoadHLType.Inc) HL.w++;
 			else if (type == LoadHLType.Dec) HL.w--;
 		}

@@ -314,7 +314,7 @@ namespace GBEmu.Emulator
 			LCDMap = new XnaColor[LCDArraySize];
 			for (int i = 0; i < LCDMap.Length; i++)
 			{
-				LCDMap[i] = DMGPredefColor.White;
+				LCDMap[i] = DMGPredefColor.Black;
 			}
 			LCDControl = 0x91;
 			ScrollX = 0x00;
@@ -781,12 +781,12 @@ namespace GBEmu.Emulator
 		/// <summary>
 		/// Sets a pixel on the main screen.
 		/// </summary>
-		/// <param name="x">The X position of the pixel.</param>
-		/// <param name="y">The Y position of the pixel.</param>
+		/// <param name="xPos">The X position of the pixel.</param>
+		/// <param name="yPos">The Y position of the pixel.</param>
 		/// <param name="color">The color of the pixel.</param>
-		private void SetPixel(int x, int y, XnaColor color)
+		private void SetPixel(int xPos, int yPos, XnaColor color)
 		{
-			LCDMap[(x * LCDStride) + y] = color;
+			LCDMap[(yPos * LCDStride) + xPos] = color;
 		}
 
 		/// <summary>

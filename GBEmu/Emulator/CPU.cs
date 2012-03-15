@@ -35,30 +35,31 @@ namespace GBEmu.Emulator
 		private const ushort IntVector_Joypad = 0x60;
 		#endregion
 
+		/*
+		 Reminder:
+		 *  0  1  2  3  4  5  6  7 | BIT
+		 * 01 02 04 08 10 20 40 80 | OR
+		 * FE FD FB F7 EF DF BF 7F | AND
+		 */
+
 		#region Flag Properties
 		private bool IsZero
 		{
 			get
 			{
-				return (AF.w & 0x80) != 0;
+				return (AF.lo & 0x80) != 0;
 			}
 			set
 			{
-				if (value)
-				{
-					AF.lo |= 0x80;
-				}
-				else
-				{
-					AF.lo &= 0x7F;
-				}
+				if (value) AF.lo |= 0x80;
+				else AF.lo &= 0x7F;
 			}
 		}//Bit 7
 		private bool IsNegativeOp
 		{
 			get
 			{
-				return (AF.w & 0x40) != 0;
+				return (AF.lo & 0x40) != 0;
 			}
 			set
 			{
@@ -76,7 +77,7 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (AF.w & 0x20) != 0;
+				return (AF.lo & 0x20) != 0;
 			}
 			set
 			{
@@ -94,7 +95,7 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (AF.w & 0x10) != 0;
+				return (AF.lo & 0x10) != 0;
 			}
 			set
 			{
@@ -169,7 +170,7 @@ namespace GBEmu.Emulator
 
 		public delegate void Writeback(int pos);
 
-		public void step(int cycles, Writeback wr)
+		public void step(int cycles)
 		{
 			while (cycles > 0)
 			{
@@ -183,7 +184,6 @@ namespace GBEmu.Emulator
 						CycleCounter += 4;
 						break;
 					case CPUState.Normal:
-						//wr(PC.w);
 						byte inst = ReadPC();
 						if (RepeatLastInstruction)//Halt bug
 						{
@@ -1920,16 +1920,14 @@ namespace GBEmu.Emulator
 		/// <remarks>
 		/// Z is set if result is zero.
 		/// N is reset.
-		/// H is set if there is carry from bit 3.
+		/// H is set if there is carry from bit 3 to bit 4.
 		/// C is unaffected.
 		/// </remarks>
 		/// <param name="register">The register to increment.</param>
 		private void Inc8(ref byte register)
 		{
-			int temp = register + 1;
-			int tempXOR = register ^ 1 ^ temp;
-			IsHalfCarry = ((tempXOR & 0x10) != 0);
 			IsNegativeOp = false;
+			IsHalfCarry = (((register & 0xF) + 1) & 0x10) != 0;
 			register++;
 			IsZero = (register == 0);
 		}
@@ -1939,16 +1937,14 @@ namespace GBEmu.Emulator
 		/// <remarks>
 		/// Z is set if result is zero.
 		/// N is set.
-		/// H is set if there is carry from bit 4.
+		/// H is set if there is borrow from bit 4 to bit 3.
 		/// C is unaffected.
 		/// </remarks>
 		/// <param name="register">The register to decrement.</param>
 		private void Dec8(ref byte register)
 		{
-			int temp = register - 1;
-			int tempXOR = register ^ -1 ^ temp;
-			IsHalfCarry = ((tempXOR & 0x08) != 0);
 			IsNegativeOp = true;
+			IsHalfCarry = (((register & 0xF) - 1) & 0x10) != 0;
 			register--;
 			IsZero = (register == 0);
 		}
@@ -1988,21 +1984,21 @@ namespace GBEmu.Emulator
 		/// <remarks>
 		/// Z is set if the result is zero.
 		/// N is reset.
-		/// H is set if there is carry from bit 3.
+		/// H is set if there is carry from bit 3 to bit 4.
 		/// C is set if there is carry from bit 7.
 		/// </remarks>
 		/// <param name="addedValue">The value to add to A.</param>
 		/// <param name="addCarry">True if the operation is an add-with-carry.</param>
 		private void AddA(byte addedValue, bool addCarry)
 		{
-			int tempAdd = (byte)(addedValue + (addCarry ? IsCarry ? 1 : 0 : 0));
 			int temp = AF.hi + addedValue + (addCarry ? (IsCarry ? 1 : 0) : 0);
-			int tempXOR = AF.hi ^ addedValue ^ (addCarry ? (IsCarry ? 1 : 0) : 0) ^ temp;
-			IsHalfCarry = ((tempXOR & 0x10) != 0);
-			IsCarry = ((tempXOR & 0x100) != 0);
+			
+			IsZero = (temp & 0xFF) == 0;
 			IsNegativeOp = false;
+			IsHalfCarry = (((AF.hi & 0x0F) + (addedValue & 0x0F) + (addCarry ? (IsCarry ? 1 : 0) : 0)) & 0x10) != 0;
+			IsCarry = ((temp & 0x100) != 0);
+			
 			AF.hi = (byte)temp;
-			IsZero = (AF.hi == 0);
 		}
 		/// <summary>
 		/// Subtracts the given value from A.
@@ -2010,21 +2006,21 @@ namespace GBEmu.Emulator
 		/// <remarks>
 		/// Z is set if the result is zero.
 		/// N is set.
-		/// H is set if there is carry from bit 4? (Check this)
-		/// C is set if there is carry from bit 8? (Check this)
+		/// H is set if there is borrow from bit 4.
+		/// C is set if there is borrow from bit 8.
 		/// </remarks>
 		/// <param name="subtractedValue">The value to subtract from A.</param>
 		/// <param name="subCarry">True if the operation is a subtract-with-carry.</param>
 		private void SubA(byte subtractedValue, bool subCarry)
 		{
-			byte tempsub = (byte)(subtractedValue + (subCarry ? IsCarry ? 1 : 0 : 0));
 			int temp = AF.hi - (subtractedValue + (subCarry ? IsCarry ? 1 : 0 : 0));
-			int tempover = AF.hi ^ -subtractedValue ^ (subCarry ? (IsCarry ? -1 : 0) : 0) ^ temp;
-			IsHalfCarry = ((tempover & 0x08) != 0);
-			IsCarry = ((tempover & 0x80) != 0);
+
+			IsZero = (temp & 0xFF) == 0;
 			IsNegativeOp = true;
+			IsHalfCarry = (((AF.hi & 0x0F) - ((subtractedValue & 0x0F) + (subCarry ? (IsCarry ? 1 : 0) : 0))) & 0x10) != 0;
+			IsCarry = ((temp & 0x100) != 0);	
+			
 			AF.hi = (byte)temp;
-			IsZero = (AF.hi == 0);
 		}
 		/// <summary>
 		/// ANDs the given value with A.
@@ -2086,18 +2082,17 @@ namespace GBEmu.Emulator
 		/// <remarks>
 		/// Z is set if the result is zero.
 		/// N is set.
-		/// H is set if there is carry from bit 4? (Check this)
-		/// C is set if there is carry from bit 8? (Check this)
+		/// H is set if there is borrow from bit 4.
+		/// C is set if there is borrow from bit 8.
 		/// </remarks>
 		/// <param name="value">The value to use.</param>
 		private void CpA(byte value)
 		{
 			int temp = AF.hi - value;
-			int tempover = AF.hi ^ -value ^  temp;
-			IsHalfCarry = ((tempover & 0x08) != 0);
-			IsCarry = ((tempover & 0x80) != 0);
-			IsNegativeOp = true;
 			IsZero = (temp & 0xFF) == 0;
+			IsNegativeOp = true;
+			IsHalfCarry = (((AF.hi & 0x0F) - (value & 0x0F)) & 0x10) != 0;
+			IsCarry = ((temp & 0x100) != 0);
 		}
 		/// <summary>
 		/// Adjusts A to be a Binary Coded Decimal.
@@ -2188,10 +2183,11 @@ namespace GBEmu.Emulator
 		{
 			CycleCounter += 4;
 			int temp = HL.w + register;
-			int tempover = HL.w ^ register ^ temp;
-			IsHalfCarry = ((tempover & 0x1000) != 0);
-			IsCarry = ((tempover & 0x10000) != 0);
+			
 			IsNegativeOp = false;
+			IsHalfCarry = (((HL.hi & 0xF) + ((register >> 8) & 0x0F)) & 0x10) != 0;
+			IsCarry = ((temp & 0x10000) != 0);
+			
 			HL.w += register;
 		}
 		/// <summary>
@@ -2205,20 +2201,14 @@ namespace GBEmu.Emulator
 		private void AddSP(byte value)
 		{
 			CycleCounter += 8;
-			int temp = SP.w + (sbyte)value;
-			int tempXOR = SP.w ^ (sbyte)value ^ temp;
+			ushort extVal = (ushort)((short)((sbyte)value));
+			int temp = SP.w + extVal;
+			
 			IsZero = false;
 			IsNegativeOp = false;
-			if ((sbyte)value >= 0)
-			{
-				IsHalfCarry = ((tempXOR & 0x1000) != 0);
-				IsCarry = ((tempXOR & 0x10000) != 0);
-			}
-			else
-			{
-				IsHalfCarry = ((tempXOR & 0x800) != 0);
-				IsCarry = ((tempXOR & 0x8000) != 0);
-			}
+			IsHalfCarry = (((SP.hi & 0x0F) + ((extVal >> 8) & 0x0F)) & 0x10) != 0;
+			IsCarry = (temp & 0x10000) != 0;
+			
 			SP.w = (ushort)temp;
 		}
 		/// <summary>
@@ -2233,21 +2223,14 @@ namespace GBEmu.Emulator
 		private void LdHLSPN()
 		{
 			CycleCounter += 4;
-			sbyte offHL = (sbyte)ReadPC();
-			int temp = SP.w + offHL;
-			int tempXOR = SP.w ^ offHL ^ temp;
+			ushort extVal = (ushort)((short)((sbyte)ReadPC()));
+			int temp = SP.w + extVal;
+
 			IsZero = false;
 			IsNegativeOp = false;
-			if (offHL >= 0)
-			{
-				IsHalfCarry = ((tempXOR & 0x1000) != 0);
-				IsCarry = ((tempXOR & 0x10000) != 0);
-			}
-			else
-			{
-				IsHalfCarry = ((tempXOR & 0x800) != 0);
-				IsCarry = ((tempXOR & 0x8000) != 0);
-			}
+			IsHalfCarry = (((SP.hi & 0x0F) + ((extVal >> 8) & 0x0F)) & 0x10) != 0;
+			IsCarry = (temp & 0x10000) != 0;
+
 			HL.w = (ushort)temp;
 		}
 		#endregion

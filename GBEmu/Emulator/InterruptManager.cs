@@ -14,22 +14,26 @@ namespace GBEmu.Emulator
 		private const int IntEnable = 0xFFFF;
 
 		public CPUState cpuState { get; set; }
-		private InterruptType InterruptEnable;
-		private InterruptType InterruptFlag;
+		private byte IE;
+		private byte IF;
 		private bool InterruptMasterEnable;
-		public bool InterruptsReady { get { return (InterruptEnable & InterruptFlag) != InterruptType.None; } }
+		public bool InterruptsReady { get { return (IE & IF) != 0; } }
 
 		public InterruptManager()
 		{
 			InterruptMasterEnable = true;
-			InterruptEnable = InterruptType.None;
-			InterruptFlag = InterruptType.None;
+		}
+
+		private void InitializeDefaultValues()
+		{
+			IE = 0;
+			IF = 0;
 		}
 
 		public byte Read(int position)
 		{
-			if (position == IntFlag) return (byte)InterruptFlag;
-			else if (position == IntEnable) return (byte)InterruptEnable;
+			if (position == IntFlag) return IF;
+			else if (position == IntEnable) return IE;
 			return 0xFF;
 		}
 
@@ -37,11 +41,11 @@ namespace GBEmu.Emulator
 		{
 			if (position == IntFlag)
 			{
-				InterruptFlag = (InterruptType)(data & 0x1F);
+				IF = data;
 			}
 			else if (position == IntEnable)
 			{
-				InterruptEnable = (InterruptType)(data & 0x1F);
+				IE = data;
 			}
 		}
 
@@ -49,7 +53,7 @@ namespace GBEmu.Emulator
 		{
 			if (InterruptMasterEnable)
 			{
-				InterruptFlag |= intType;
+				IF |= (byte)intType;
 			}
 		}
 
@@ -71,37 +75,38 @@ namespace GBEmu.Emulator
 		public InterruptType FetchNextInterrupt()
 		{
 			if (!InterruptMasterEnable) return InterruptType.None;
-			if ((InterruptFlag & InterruptType.VBlank) != 0)
+			byte triggered = (byte)(IE & IF);
+			if ((triggered & 0x1) != 0)
 			{
-				InterruptFlag ^= InterruptType.VBlank;
+				IF ^= 0x01;
 				DisableInterrupts();
 				return InterruptType.VBlank;
 			}
-			else if ((InterruptFlag & InterruptType.LCDC) != 0)
+			if ((triggered & 0x2) != 0)
 			{
-				InterruptFlag ^= InterruptType.LCDC;
+				IF ^= 0x02;
 				DisableInterrupts();
 				return InterruptType.LCDC;
 			}
-			else if ((InterruptFlag & InterruptType.Timer) != 0)
+			if ((triggered & 0x4) != 0)
 			{
-				InterruptFlag ^= InterruptType.Timer;
+				IF ^= 0x04;
 				DisableInterrupts();
 				return InterruptType.Timer;
 			}
-			else if ((InterruptFlag & InterruptType.Serial) != 0)
+			if ((triggered & 0x08) != 0)
 			{
-				InterruptFlag ^= InterruptType.Serial;
+				IF ^= 0x08;
 				DisableInterrupts();
 				return InterruptType.Serial;
 			}
-			else if ((InterruptFlag & InterruptType.Joypad) != 0)
+			if ((triggered & 0x10) != 0)
 			{
-				InterruptFlag ^= InterruptType.Joypad;
+				IF ^= 0x10;
 				DisableInterrupts();
 				return InterruptType.Joypad;
 			}
-			else return InterruptType.None;
+			return InterruptType.None;
 		}
 	}
 }

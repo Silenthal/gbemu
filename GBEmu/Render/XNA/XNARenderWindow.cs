@@ -35,6 +35,7 @@ namespace GBEmu.Render.XNA
 
 		public void CopyData(XnaColor[] newData)
 		{
+			GraphicsDevice.Textures[0] = null;
 			canvas.SetData<XnaColor>(newData);
 		}
 

@@ -13,7 +13,6 @@ namespace GBEmu.Emulator
 		private const int IntFlag = 0xFF0F;
 		private const int IntEnable = 0xFFFF;
 
-		public CPUState cpuState { get; set; }
 		private byte IE;
 		private byte IF;
 		private bool InterruptMasterEnable;
@@ -27,7 +26,7 @@ namespace GBEmu.Emulator
 		private void InitializeDefaultValues()
 		{
 			IE = 0;
-			IF = 0;
+			IF = 0xE0;
 		}
 
 		public byte Read(int position)

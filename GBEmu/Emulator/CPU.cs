@@ -919,7 +919,7 @@ namespace GBEmu.Emulator
 								PC.w = HL.w;
 								break;
 							case 0xEA://ld [$nnnn],a
-								WriteWord(ReadPCWord(), AF.hi);
+								WriteMMU(ReadPCWord(), AF.hi);
 								break;
 							case 0xEB://--
 								break;
@@ -949,7 +949,7 @@ namespace GBEmu.Emulator
 								AF.hi = ReadMMU(ldrcaddress);
 								break;
 							case 0xF3://di
-								interruptManager.DisableInterrupts();
+								DI();
 								break;
 							case 0xF4://--
 								break;
@@ -973,7 +973,7 @@ namespace GBEmu.Emulator
 								AF.hi = ReadMMU(ReadPCWord());
 								break;
 							case 0xFB://ei
-								interruptManager.EnableInterrupts();
+								EI();
 								break;
 							case 0xFC://--
 								break;

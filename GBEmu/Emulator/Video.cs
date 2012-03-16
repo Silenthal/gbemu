@@ -469,10 +469,30 @@ namespace GBEmu.Emulator
 		private const int LCDDrawCycles = 70224;
 		#endregion
 
+		/// <summary>
+		/// Represents the LCD that is being drawn to.
+		/// </summary>
 		private XnaColor[] LCDMap;
 
-		public byte[] VRAM;//0x8000-0x9FFF
+		/// <summary>
+		/// [8000-9FFF]Video RAM.
+		/// </summary>
+		public byte[] VRAM;
 		
+		/// <summary>
+		/// [FE00-FE9F]Object Attribute Memory.
+		/// </summary>
+		/// <remarks>
+		/// OAM contains entries for 40 sprites. Each entry consists of 4 bytes:
+		/// Byte 0: Y-Position
+		/// Byte 1: X-Position
+		/// Byte 2: Tile/Pattern Number
+		/// Byte 3: Sprite Attributes
+		/// -Bit 7: OBJ priority
+		/// -Bit 6: Y Flip
+		/// -Bit 5: X Flip
+		/// -Bit 4: Palette Number (DMG)
+		/// </remarks>
 		public byte[] OAM;//0xFE00-0xFE9F
 
 		public int ExecutedFrameCycles;
@@ -535,7 +555,6 @@ namespace GBEmu.Emulator
 			UpdateObjectPalette0();
 			UpdateObjectPalette1();
 		}
-
 		#endregion
 
 		#region Reads

@@ -4,12 +4,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("GBRead")]
-[assembly: AssemblyDescription("A program for reading and disassembling GB/GBC files.")]
+[assembly: AssemblyTitle("GBEmu")]
+[assembly: AssemblyDescription("A Game Boy emulator.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("GBRead")]
-[assembly: AssemblyCopyright("Copyright © 2010-2011 Silenthal")]
+[assembly: AssemblyProduct("GBEmu")]
+[assembly: AssemblyCopyright("Copyright © 2010-2012 Silenthal")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -31,5 +31,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.12.3.0")]
-[assembly: AssemblyFileVersion("0.12.3.0")]
+[assembly: AssemblyVersion("0.1.0.0")]
+[assembly: AssemblyFileVersion("0.1.0.0")]

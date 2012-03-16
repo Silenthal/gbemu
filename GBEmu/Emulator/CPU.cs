@@ -63,14 +63,8 @@ namespace GBEmu.Emulator
 			}
 			set
 			{
-				if (value)
-				{
-					AF.lo |= 0x40;
-				}
-				else
-				{
-					AF.lo &= 0xBF;
-				}
+				if (value)AF.lo |= 0x40;
+				else AF.lo &= 0xBF;
 			}
 		}//Bit 6
 		private bool IsHalfCarry
@@ -81,14 +75,8 @@ namespace GBEmu.Emulator
 			}
 			set
 			{
-				if (value)
-				{
-					AF.lo |= 0x20;
-				}
-				else
-				{
-					AF.lo &= 0xDF;
-				}
+				if (value)AF.lo |= 0x20;
+				else AF.lo &= 0xDF;
 			}
 		}//Bit 5
 		private bool IsCarry
@@ -99,14 +87,8 @@ namespace GBEmu.Emulator
 			}
 			set
 			{
-				if (value)
-				{
-					AF.lo |= 0x10;
-				}
-				else
-				{
-					AF.lo &= 0xEF;
-				}
+				if (value) AF.lo |= 0x10;
+				else AF.lo &= 0xEF;
 			}
 		}//Bit 4
 		#endregion
@@ -942,6 +924,7 @@ namespace GBEmu.Emulator
 								break;
 							case 0xF1://pop af
 								Pop(ref AF.w);
+								AF.lo &= 0xF0;//Only writes to higher 4 bits of F are possible.
 								break;
 							case 0xF2://ld a,[c]
 								ushort ldrcaddress = 0xFF00;
@@ -1891,6 +1874,15 @@ namespace GBEmu.Emulator
 			return read;
 		}
 		/// <summary>
+		/// Writes a byte using the Stack Pointer as an address, and decrements the SP. Takes 4 cycles to complete.
+		/// </summary>
+		/// <param name="data">The data to write.</param>
+		private void WriteSP(byte data)
+		{
+			SP.w--;
+			WriteMMU(SP.w, data);
+		}
+		/// <summary>
 		/// Writes a little-endian word to the given address. Takes 8 cycles to complete.
 		/// </summary>
 		/// <param name="dest">The address of the destination.</param>
@@ -2580,25 +2572,27 @@ namespace GBEmu.Emulator
 		/// <summary>
 		/// Pushes a given word to the stack. Takes 12 cycles to complete.
 		/// </summary>
+		/// <remarks>
+		/// Pushes the high byte first, then the low byte.
+		/// </remarks>
 		/// <param name="pushData">The word to push.</param>
 		private void Push(ushort pushData)
 		{
 			CycleCounter += 4;
-			SP.w--;
-			WriteMMU(SP.w, (byte)(pushData >> 8));
-			SP.w--;
-			WriteMMU(SP.w, (byte)pushData);
+			WriteSP((byte)(pushData >> 8));
+			WriteSP((byte)(pushData));
 		}
-
 		/// <summary>
 		/// Pops a word off the stack to the given location. Takes 8 cycles to complete.
 		/// </summary>
+		/// <remarks>
+		/// Pops the low byte first, then the high byte.
+		/// </remarks>
 		/// <param name="popLoc">The location to pop to.</param>
 		private void Pop(ref ushort popLoc)
 		{
-			ushort x = ReadSP();
-			x |= (ushort)(ReadSP() << 8);
-			popLoc = x;
+			popLoc = ReadSP();
+			popLoc |= (ushort)(ReadSP() << 8);
 		}
 		#endregion
 		#endregion

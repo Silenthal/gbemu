@@ -7,20 +7,44 @@ namespace GBEmu.Emulator
 	
 	class InterruptManager : IReadWriteCapable
 	{
-		//Contains:
-		//[FFFF]: Interrupt Enable
-		//[FF0F]: Interrupt Flag
 		private const int IntFlag = 0xFF0F;
 		private const int IntEnable = 0xFFFF;
 
+		/// <summary>
+		/// [FFFF]Enables/disables the handling of the interrupt flags.
+		/// </summary>
+		/// <remarks>
+		/// Bit 0: V-Blank Interrupt Enable
+		/// Bit 1: LCDC Interrupt Enable
+		/// Bit 2: Timer Interrupt Enable
+		/// Bit 3: Serial Interrupt Enable
+		/// Bit 4: Joypad Interrupt Enable
+		/// </remarks>
 		private byte IE;
+		/// <summary>
+		/// [FF0F]Contains interrupts flagged by the various systems in the Game Boy.
+		/// </summary>
+		/// <remarks>
+		/// Bit 0: V-Blank Flag
+		/// Bit 1: LCDC Flag
+		/// Bit 2: Timer Flag
+		/// Bit 3: Serial Flag
+		/// Bit 4: Joypad Flag
+		/// </remarks>
 		private byte IF;
-		private bool InterruptMasterEnable;
+		/// <summary>
+		/// The master flag for interrupts. Set to false to prevent interrupts from ocurring, even when requested.
+		/// </summary>
+		public bool InterruptMasterEnable { get; private set; }
+		/// <summary>
+		/// Returns true whether interrupts are ready and waiting to be handled.
+		/// </summary>
 		public bool InterruptsReady { get { return (IE & IF) != 0; } }
 
 		public InterruptManager()
 		{
 			InterruptMasterEnable = true;
+			InitializeDefaultValues();
 		}
 
 		private void InitializeDefaultValues()
@@ -40,7 +64,7 @@ namespace GBEmu.Emulator
 		{
 			if (position == IntFlag)
 			{
-				IF = data;
+				IF = (byte)(data | 0xE0);
 			}
 			else if (position == IntEnable)
 			{
@@ -48,64 +72,73 @@ namespace GBEmu.Emulator
 			}
 		}
 
+		/// <summary>
+		/// Request that an interrupt be flagged in [IF].
+		/// </summary>
+		/// <param name="intType">The type of interrupt to flag.</param>
 		public void RequestInterrupt(InterruptType intType)
 		{
-			if (InterruptMasterEnable)
-			{
-				IF |= (byte)intType;
-			}
+			IF |= (byte)intType;
 		}
 
-		public bool InterruptsEnabled()
-		{
-			return InterruptMasterEnable;
-		}
-
+		/// <summary>
+		/// Disables interrupts.
+		/// </summary>
 		public void DisableInterrupts()
 		{
 			InterruptMasterEnable = false;
 		}
 
+		/// <summary>
+		/// Enables interrupts.
+		/// </summary>
 		public void EnableInterrupts()
 		{
 			InterruptMasterEnable = true;
 		}
 
-		public InterruptType FetchNextInterrupt()
+		/// <summary>
+		/// Returns the next unhandled interrupt. If there is more than one flagged and enabled, the one with the highest priority is returned.
+		/// </summary>
+		/// <remarks>
+		/// Interrupts are triggered in HALT state even if IME is off.
+		/// When an interrupt ends the HALT state, the flag isn't cleared afterwards.
+		/// </remarks>
+		/// <returns>The type of interrupt being handled.</returns>
+		public InterruptType FetchNextInterrupt(CPUState currentState)
 		{
-			if (!InterruptMasterEnable) return InterruptType.None;
+			if (!InterruptMasterEnable && currentState != CPUState.Halt) return InterruptType.None;
 			byte triggered = (byte)(IE & IF);
-			if ((triggered & 0x1) != 0)
+			InterruptType returned = InterruptType.None;
+			#region Getting interrupt according to priority
+			if ((triggered & 0x01) != 0)
 			{
-				IF ^= 0x01;
-				DisableInterrupts();
-				return InterruptType.VBlank;
+				returned = InterruptType.VBlank;
 			}
-			if ((triggered & 0x2) != 0)
+			if ((triggered & 0x02) != 0)
 			{
-				IF ^= 0x02;
-				DisableInterrupts();
-				return InterruptType.LCDC;
+				returned = InterruptType.LCDC;
 			}
-			if ((triggered & 0x4) != 0)
+			if ((triggered & 0x04) != 0)
 			{
-				IF ^= 0x04;
-				DisableInterrupts();
-				return InterruptType.Timer;
+				returned = InterruptType.Timer;
 			}
 			if ((triggered & 0x08) != 0)
 			{
-				IF ^= 0x08;
-				DisableInterrupts();
 				return InterruptType.Serial;
 			}
 			if ((triggered & 0x10) != 0)
 			{
-				IF ^= 0x10;
-				DisableInterrupts();
-				return InterruptType.Joypad;
+				returned = InterruptType.Joypad;
 			}
-			return InterruptType.None;
+			#endregion
+			if (returned == InterruptType.None) return returned;
+			if (currentState != CPUState.Halt)
+			{
+				IF ^= (byte)returned;
+				DisableInterrupts();
+			}
+			return returned;
 		}
 	}
 }

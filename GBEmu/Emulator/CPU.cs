@@ -1787,8 +1787,7 @@ namespace GBEmu.Emulator
 
 		private void CheckInterrupts()
 		{
-			if (!interruptManager.InterruptsEnabled()) return;
-			InterruptType iType = interruptManager.FetchNextInterrupt();
+			InterruptType iType = interruptManager.FetchNextInterrupt(state);
 			if (iType != InterruptType.None)
 			{
 				ushort intVector = 0;
@@ -2552,15 +2551,15 @@ namespace GBEmu.Emulator
 		/// </summary>
 		private void Halt()
 		{
-			if (interruptManager.InterruptsEnabled())
-			{
-				state = CPUState.Halt;
-			}
-			else if (interruptManager.InterruptsReady)
+			if (!interruptManager.InterruptMasterEnable && interruptManager.InterruptsReady)
 			{
 				//if (mmu.IsCGB) CycleCounter += 4;
 				/*else*/
-				RepeatLastInstruction = true;
+				RepeatLastInstruction = true;	
+			}
+			else
+			{
+				state = CPUState.Halt;
 			}
 		}
 		/// <summary>

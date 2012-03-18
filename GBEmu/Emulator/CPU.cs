@@ -785,7 +785,7 @@ namespace GBEmu.Emulator
 								Call(!IsZero);
 								break;
 							case 0xC5://push bc
-								Push(BC.w);
+								PushRegister(BC.w);
 								break;
 							case 0xC6://add a,nn
 								AddA(ReadPC(), false);
@@ -834,7 +834,7 @@ namespace GBEmu.Emulator
 								Call(!IsCarry);
 								break;
 							case 0xD5://push de
-								Push(DE.w);
+								PushRegister(DE.w);
 								break;
 							case 0xD6://sub nn
 								SubA(ReadPC(), false);
@@ -884,7 +884,7 @@ namespace GBEmu.Emulator
 							case 0xE4://--
 								break;
 							case 0xE5://push hl
-								Push(HL.w);
+								PushRegister(HL.w);
 								break;
 							case 0xE6://and a,nn
 								AndA(ReadPC());
@@ -932,7 +932,7 @@ namespace GBEmu.Emulator
 							case 0xF4://--
 								break;
 							case 0xF5://push af
-								Push(AF.w);
+								PushRegister(AF.w);
 								break;
 							case 0xF6://or nn
 								OrA(ReadPC());
@@ -1809,6 +1809,8 @@ namespace GBEmu.Emulator
 						intVector = IntVector_Joypad;
 						break;
 				}
+				//Is this for reading from the int vector table (using ReadMMU for low and high bytes of address)?
+				CycleCounter += 8;
 				Push(PC.w);
 				PCChange(intVector);
 				interruptManager.DisableInterrupts();
@@ -2507,7 +2509,7 @@ namespace GBEmu.Emulator
 			if (IsCondTrue)
 			{
 				Push(PC.w);
-				PC.w = x;
+				PCChange(x);
 			}
 		}
 		/// <summary>
@@ -2535,7 +2537,7 @@ namespace GBEmu.Emulator
 			}
 		}
 		/// <summary>
-		/// Pushes the current address and jumps to the given jump vector. Takes 16 cycles to complete.
+		/// Pushes the current address and jumps to the given jump vector. Takes 12 cycles to complete.
 		/// </summary>
 		/// <param name="jumpVector">The vector to jump to.</param>
 		private void RST(byte jumpVector)
@@ -2618,7 +2620,7 @@ namespace GBEmu.Emulator
 
 		#region Stack Commands
 		/// <summary>
-		/// Pushes a given word to the stack. Takes 12 cycles to complete.
+		/// Pushes a given word to the stack. Takes 8 cycles to complete.
 		/// </summary>
 		/// <remarks>
 		/// Pushes the high byte first, then the low byte.
@@ -2626,9 +2628,20 @@ namespace GBEmu.Emulator
 		/// <param name="pushData">The word to push.</param>
 		private void Push(ushort pushData)
 		{
-			CycleCounter += 4;
 			WriteSP((byte)(pushData >> 8));
 			WriteSP((byte)(pushData));
+		}
+		/// <summary>
+		/// Pushes a given register to the stack. Takes 12 cycles to complete.
+		/// </summary>
+		/// <remarks>
+		/// Pushes the high byte first, then the low byte.
+		/// </remarks>
+		/// <param name="pushData">The word to push.</param>
+		private void PushRegister(ushort pushData)
+		{
+			Push(pushData);
+			CycleCounter += 4;
 		}
 		/// <summary>
 		/// Pops a word off the stack to the given location. Takes 8 cycles to complete.

@@ -2,7 +2,8 @@
 {
 	class PlainCart : Cart
 	{
-		public PlainCart(byte[] romFile) : base(romFile)
+		public PlainCart(byte[] romFile, CartFeatures cartFeatures)
+			: base(romFile, cartFeatures)
 		{
 
 		}

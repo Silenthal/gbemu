@@ -4,7 +4,8 @@
 	{
 		private bool IsRumble;
 
-		public MBC5(byte[] inFile) : base(inFile)
+		public MBC5(byte[] inFile, CartFeatures cartFeatures)
+			: base(inFile, cartFeatures)
 		{
 			IsRumble = false;
 		}

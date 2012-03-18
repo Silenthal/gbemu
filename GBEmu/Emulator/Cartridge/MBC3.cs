@@ -10,7 +10,8 @@ namespace GBEmu.Emulator.Cartridge
 		private byte RTCRegister;
 		private byte LastLatchWrite;
 
-		public MBC3(byte[] inFile) : base(inFile)
+		public MBC3(byte[] inFile, CartFeatures cartFeatures)
+			: base(inFile, cartFeatures)
 		{
 			RTC = new byte[5];
 			RTCRegister = 0;

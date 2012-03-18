@@ -25,6 +25,9 @@ namespace GBEmu.Emulator
 
 		private InterruptManager interruptManager;
 		
+		/// <summary>
+		/// A flag that indicates, in DMG mode, whether the HALT bug has taken place and the next instruction should be skipped.
+		/// </summary>
 		private bool RepeatLastInstruction;
 
 		#region Interrupt Vectors
@@ -43,6 +46,9 @@ namespace GBEmu.Emulator
 		 */
 
 		#region Flag Properties
+		/// <summary>
+		/// This flag specifies whether the last operation resulted in a 0.
+		/// </summary>
 		private bool IsZero
 		{
 			get
@@ -55,6 +61,9 @@ namespace GBEmu.Emulator
 				else AF.lo &= 0x7F;
 			}
 		}//Bit 7
+		/// <summary>
+		/// This flag specifies whether the last operation was a subtract operation.
+		/// </summary>
 		private bool IsNegativeOp
 		{
 			get
@@ -67,6 +76,9 @@ namespace GBEmu.Emulator
 				else AF.lo &= 0xBF;
 			}
 		}//Bit 6
+		/// <summary>
+		/// This flag specifies whether the last operation resulted in carry between two nibbles of a byte.
+		/// </summary>
 		private bool IsHalfCarry
 		{
 			get
@@ -79,6 +91,9 @@ namespace GBEmu.Emulator
 				else AF.lo &= 0xDF;
 			}
 		}//Bit 5
+		/// <summary>
+		/// THis flag specifies whether the last operation resulted in carry from the top nibble of a byte.
+		/// </summary>
 		private bool IsCarry
 		{
 			get
@@ -128,7 +143,7 @@ namespace GBEmu.Emulator
 		
 		public MMU mmu;
 
-		private int CycleCounter;
+		private int CyclesSinceLastUpdate;
 
 		public CPU(byte[] inFile, GBEmu.Render.IRenderable screen)
 		{
@@ -139,29 +154,34 @@ namespace GBEmu.Emulator
 
 		public void InitializeDefaultValues()
 		{
+			#region DMG-specific register variables
 			PC.w = 0x0100;
 			SP.w = 0xFFFE;
 			AF.w = 0x01B0;
 			BC.w = 0x0013;
 			DE.w = 0x00D8;
 			HL.w = 0x014D;
-			CycleCounter = 0;
+			#endregion
+			CyclesSinceLastUpdate = 0;
 			state = CPUState.Normal;
 			RepeatLastInstruction = false;
 		}
 
-		public void step(int cycles)
+		#region CPU actions
+		/// <summary>
+		/// Runs the CPU (and the system) for the specified ammount of cycles.
+		/// </summary>
+		/// <param name="cycles">The amount of cycles to run.</param>
+		public void RunFor(int cycles)
 		{
 			while (cycles > 0)
 			{
-				//Stop doesn't increment the PC, and turns off the LCD.
-				//Also, speed switch occurs after stop is used.
-				CycleCounter = 0;
+				CyclesSinceLastUpdate = 0;
 				CheckInterrupts();
 				switch (state)
 				{
 					case CPUState.Halt:
-						CycleCounter += 4;
+						UpdateSystemTime(4);
 						break;
 					case CPUState.Normal:
 						byte inst = ReadPC();
@@ -347,7 +367,7 @@ namespace GBEmu.Emulator
 								WriteMMU(HL.w, ReadPC());
 								break;
 							case 0x37://scf
-								SCF();
+								SetCarryFlag();
 								break;
 							case 0x38://jr c,nn
 								JumpRelative(IsCarry);
@@ -372,7 +392,7 @@ namespace GBEmu.Emulator
 								AF.hi = ReadPC();
 								break;
 							case 0x3F://ccf
-								CCF();
+								ComplementCarryFlag();
 								break;
 							#endregion
 							#region Ops 0x40-0x4F
@@ -791,7 +811,7 @@ namespace GBEmu.Emulator
 								AddA(ReadPC(), false);
 								break;
 							case 0xC7://rst $00
-								RST(0x00);
+								Reset(0x00);
 								break;
 							case 0xC8://ret z
 								CheckedReturn(IsZero);
@@ -815,7 +835,7 @@ namespace GBEmu.Emulator
 								AddA(ReadPC(), true);
 								break;
 							case 0xCF://rst $08
-								RST(0x08);
+								Reset(0x08);
 								break;
 							#endregion
 							#region Ops 0xD0-0xDF
@@ -840,7 +860,7 @@ namespace GBEmu.Emulator
 								SubA(ReadPC(), false);
 								break;
 							case 0xD7://rst $10
-								RST(0x10);
+								Reset(0x10);
 								break;
 							case 0xD8://ret c
 								CheckedReturn(IsCarry);
@@ -862,22 +882,18 @@ namespace GBEmu.Emulator
 								SubA(ReadPC(), true);
 								break;
 							case 0xDF://rst $18
-								RST(0x18);
+								Reset(0x18);
 								break;
 							#endregion
 							#region Ops 0xE0-0xEF
 							case 0xE0://ld [$ffnn],a
-								ushort ldaddress = 0xFF00;
-								ldaddress |= ReadPC();
-								WriteMMU(ldaddress, AF.hi);
+								WritePort(ReadPC(), AF.hi);
 								break;
 							case 0xE1://pop hl
 								Pop(ref HL.w);
 								break;
 							case 0xE2://ld [c],a
-								ushort ldcaddress = 0xFF00;
-								ldcaddress |= BC.lo;
-								WriteMMU(ldcaddress, AF.hi);
+								WritePort(BC.lo, AF.hi);
 								break;
 							case 0xE3://--
 								break;
@@ -890,11 +906,11 @@ namespace GBEmu.Emulator
 								AndA(ReadPC());
 								break;
 							case 0xE7://rst $20
-								RST(0x20);
+								Reset(0x20);
 								break;
 							case 0xE8://add sp,nn
 								SP.w = AddSPImmediate();
-								CycleCounter += 4;
+								UpdateSystemTime(4);
 								break;
 							case 0xE9://jp hl
 								PC.w = HL.w;
@@ -912,22 +928,22 @@ namespace GBEmu.Emulator
 								XorA(ReadPC());
 								break;
 							case 0xEF://rst $28
-								RST(0x28);
+								Reset(0x28);
 								break;
 							#endregion
 							#region Ops 0xF0-0xFF
 							case 0xF0://ld a,[$ffnn]
-								AF.hi = ReadMMU((ushort)(0xFF00 | ReadPC()));
+								AF.hi = ReadPort(ReadPC());
 								break;
 							case 0xF1://pop af
 								Pop(ref AF.w);
 								AF.lo &= 0xF0;//Only writes to higher 4 bits of F are possible.
 								break;
 							case 0xF2://ld a,[c]
-								AF.hi = ReadMMU((ushort)(0xFF00 | BC.lo));
+								AF.hi = ReadPort(BC.lo);
 								break;
 							case 0xF3://di
-								DI();
+								DisableInterrupts();
 								break;
 							case 0xF4://--
 								break;
@@ -938,20 +954,20 @@ namespace GBEmu.Emulator
 								OrA(ReadPC());
 								break;
 							case 0xF7://rst $30
-								RST(0x30);
+								Reset(0x30);
 								break;
 							case 0xF8://ldhl sp,nn
 								LdHLSPN();
 								break;
 							case 0xF9://ld sp,hl
 								SP.w = HL.w;
-								CycleCounter += 4;
+								UpdateSystemTime(4);
 								break;
 							case 0xFA://ld a,[nnnn]
 								AF.hi = ReadMMU(ReadPCWord());
 								break;
 							case 0xFB://ei
-								EI();
+								EnableInterrupts();
 								break;
 							case 0xFC://--
 								break;
@@ -961,18 +977,20 @@ namespace GBEmu.Emulator
 								CpA(ReadPC());
 								break;
 							case 0xFF://rst $38
-								RST(0x38);
+								Reset(0x38);
 								break;
 							#endregion
 						}
 						break;
 				}
-				cycles -= CycleCounter;
-				mmu.UpdateCounter(CycleCounter);
+				cycles -= CyclesSinceLastUpdate;
 			}
 		}
 
-		public void CBstep()
+		/// <summary>
+		/// Executes an instruction following a read of 0xCB from the PC.
+		/// </summary>
+		private void CBstep()
 		{
 			switch (ReadPC())
 			{
@@ -1202,589 +1220,592 @@ namespace GBEmu.Emulator
 				#endregion
 				#region Bit
 				case 0x40://bit 0, b
-					Bit(BC.hi, 0);
+					TestBit(BC.hi, 0);
 					break;
 				case 0x41://bit 0, c
-					Bit(BC.lo, 0);
+					TestBit(BC.lo, 0);
 					break;
 				case 0x42://bit 0, d
-					Bit(DE.hi, 0);
+					TestBit(DE.hi, 0);
 					break;
 				case 0x43://bit 0, e
-					Bit(DE.lo, 0);
+					TestBit(DE.lo, 0);
 					break;
 				case 0x44://bit 0, h
-					Bit(HL.hi, 0);
+					TestBit(HL.hi, 0);
 					break;
 				case 0x45://bit 0, l
-					Bit(HL.lo, 0);
+					TestBit(HL.lo, 0);
 					break;
 				case 0x46://bit 0, [hl]
-					Bit(ReadMMU(HL.w), 0);
+					TestBit(ReadMMU(HL.w), 0);
 					break;
 				case 0x47://bit 0, a
-					Bit(AF.hi, 0);
+					TestBit(AF.hi, 0);
 					break;
 				case 0x48://bit 1, b
-					Bit(BC.hi, 1);
+					TestBit(BC.hi, 1);
 					break;
 				case 0x49://bit 1, c
-					Bit(BC.lo, 1);
+					TestBit(BC.lo, 1);
 					break;
 				case 0x4A://bit 1, d
-					Bit(DE.hi, 1);
+					TestBit(DE.hi, 1);
 					break;
 				case 0x4B://bit 1, e
-					Bit(DE.lo, 1);
+					TestBit(DE.lo, 1);
 					break;
 				case 0x4C://bit 1, h
-					Bit(HL.hi, 1);
+					TestBit(HL.hi, 1);
 					break;
 				case 0x4D://bit 1, l
-					Bit(HL.lo, 1);
+					TestBit(HL.lo, 1);
 					break;
 				case 0x4E://bit 1, hl
-					Bit(ReadMMU(HL.w), 1);
+					TestBit(ReadMMU(HL.w), 1);
 					break;
 				case 0x4F://bit 1, a
-					Bit(AF.hi, 1);
+					TestBit(AF.hi, 1);
 					break;
 				case 0x50://bit 2, b
-					Bit(BC.hi, 2);
+					TestBit(BC.hi, 2);
 					break;
 				case 0x51://bit 2, c
-					Bit(BC.lo, 2);
+					TestBit(BC.lo, 2);
 					break;
 				case 0x52://bit 2, d
-					Bit(DE.hi, 2);
+					TestBit(DE.hi, 2);
 					break;
 				case 0x53://bit 2, e
-					Bit(DE.lo, 2);
+					TestBit(DE.lo, 2);
 					break;
 				case 0x54://bit 2, h
-					Bit(HL.hi, 2);
+					TestBit(HL.hi, 2);
 					break;
 				case 0x55://bit 2, l
-					Bit(HL.lo, 2);
+					TestBit(HL.lo, 2);
 					break;
 				case 0x56://bit 2, hl
-					Bit(ReadMMU(HL.w), 2);
+					TestBit(ReadMMU(HL.w), 2);
 					break;
 				case 0x57://bit 2, a
-					Bit(AF.hi, 2);
+					TestBit(AF.hi, 2);
 					break;
 				case 0x58://bit 3, b
-					Bit(BC.hi, 3);
+					TestBit(BC.hi, 3);
 					break;
 				case 0x59://bit 3, c
-					Bit(BC.lo, 3);
+					TestBit(BC.lo, 3);
 					break;
 				case 0x5A://bit 3, d
-					Bit(DE.hi, 3);
+					TestBit(DE.hi, 3);
 					break;
 				case 0x5B://bit 3, e
-					Bit(DE.lo, 3);
+					TestBit(DE.lo, 3);
 					break;
 				case 0x5C://bit 3, h
-					Bit(HL.hi, 3);
+					TestBit(HL.hi, 3);
 					break;
 				case 0x5D://bit 3, l
-					Bit(HL.lo, 3);
+					TestBit(HL.lo, 3);
 					break;
 				case 0x5E://bit 3, hl
-					Bit(ReadMMU(HL.w), 3);
+					TestBit(ReadMMU(HL.w), 3);
 					break;
 				case 0x5F://bit 3, a
-					Bit(AF.hi, 3);
+					TestBit(AF.hi, 3);
 					break;
 				case 0x60://bit 4, b
-					Bit(BC.hi, 4);
+					TestBit(BC.hi, 4);
 					break;
 				case 0x61://bit 4, c
-					Bit(BC.lo, 4);
+					TestBit(BC.lo, 4);
 					break;
 				case 0x62://bit 4, d
-					Bit(DE.hi, 4);
+					TestBit(DE.hi, 4);
 					break;
 				case 0x63://bit 4, e
-					Bit(DE.lo, 4);
+					TestBit(DE.lo, 4);
 					break;
 				case 0x64://bit 4, h
-					Bit(HL.hi, 4);
+					TestBit(HL.hi, 4);
 					break;
 				case 0x65://bit 4, l
-					Bit(HL.lo, 4);
+					TestBit(HL.lo, 4);
 					break;
 				case 0x66://bit 4, hl
-					Bit(ReadMMU(HL.w), 4);
+					TestBit(ReadMMU(HL.w), 4);
 					break;
 				case 0x67://bit 4, a
-					Bit(AF.hi, 4);
+					TestBit(AF.hi, 4);
 					break;
 				case 0x68://bit 5, b
-					Bit(BC.hi, 5);
+					TestBit(BC.hi, 5);
 					break;
 				case 0x69://bit 5, c
-					Bit(BC.lo, 5);
+					TestBit(BC.lo, 5);
 					break;
 				case 0x6A://bit 5, d
-					Bit(DE.hi, 5);
+					TestBit(DE.hi, 5);
 					break;
 				case 0x6B://bit 5, e
-					Bit(DE.lo, 5);
+					TestBit(DE.lo, 5);
 					break;
 				case 0x6C://bit 5, h
-					Bit(HL.hi, 5);
+					TestBit(HL.hi, 5);
 					break;
 				case 0x6D://bit 5, l
-					Bit(HL.lo, 5);
+					TestBit(HL.lo, 5);
 					break;
 				case 0x6E://bit 5, hl
-					Bit(ReadMMU(HL.w), 5);
+					TestBit(ReadMMU(HL.w), 5);
 					break;
 				case 0x6F://bit 5, a
-					Bit(AF.hi, 5);
+					TestBit(AF.hi, 5);
 					break;
 				case 0x70://bit 6, b
-					Bit(BC.hi, 6);
+					TestBit(BC.hi, 6);
 					break;
 				case 0x71://bit 6, c
-					Bit(BC.lo, 6);
+					TestBit(BC.lo, 6);
 					break;
 				case 0x72://bit 6, d
-					Bit(DE.hi, 6);
+					TestBit(DE.hi, 6);
 					break;
 				case 0x73://bit 6, e
-					Bit(DE.lo, 6);
+					TestBit(DE.lo, 6);
 					break;
 				case 0x74://bit 6, h
-					Bit(HL.hi, 6);
+					TestBit(HL.hi, 6);
 					break;
 				case 0x75://bit 6, l
-					Bit(HL.lo, 6);
+					TestBit(HL.lo, 6);
 					break;
 				case 0x76://bit 6, hl
-					Bit(ReadMMU(HL.w), 6);
+					TestBit(ReadMMU(HL.w), 6);
 					break;
 				case 0x77://bit 6, a
-					Bit(AF.hi, 6);
+					TestBit(AF.hi, 6);
 					break;
 				case 0x78://bit 7, b
-					Bit(BC.hi, 7);
+					TestBit(BC.hi, 7);
 					break;
 				case 0x79://bit 7, c
-					Bit(BC.lo, 7);
+					TestBit(BC.lo, 7);
 					break;
 				case 0x7A://bit 7, d
-					Bit(DE.hi, 7);
+					TestBit(DE.hi, 7);
 					break;
 				case 0x7B://bit 7, e
-					Bit(DE.lo, 7);
+					TestBit(DE.lo, 7);
 					break;
 				case 0x7C://bit 7, h
-					Bit(HL.hi, 7);
+					TestBit(HL.hi, 7);
 					break;
 				case 0x7D://bit 7, l
-					Bit(HL.lo, 7);
+					TestBit(HL.lo, 7);
 					break;
 				case 0x7E://bit 7, [hl]
-					Bit(ReadMMU(HL.w), 7);
+					TestBit(ReadMMU(HL.w), 7);
 					break;
 				case 0x7F://bit 7, a
-					Bit(AF.hi, 7);
+					TestBit(AF.hi, 7);
 					break;
 				#endregion
 				#region Reset
 				case 0x80://res 0, b
-					Reset(ref BC.hi, 0);
+					ResetBit(ref BC.hi, 0);
 					break;
 				case 0x81://res 0, c
-					Reset(ref BC.lo, 0);
+					ResetBit(ref BC.lo, 0);
 					break;
 				case 0x82://res 0, d
-					Reset(ref DE.hi, 0);
+					ResetBit(ref DE.hi, 0);
 					break;
 				case 0x83://res 0, e
-					Reset(ref DE.lo, 0);
+					ResetBit(ref DE.lo, 0);
 					break;
 				case 0x84://res 0, h
-					Reset(ref HL.hi, 0);
+					ResetBit(ref HL.hi, 0);
 					break;
 				case 0x85://res 0, l
-					Reset(ref HL.lo, 0);
+					ResetBit(ref HL.lo, 0);
 					break;
 				case 0x86://res 0, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_0));
 					break;
 				case 0x87://res 0, a
-					Reset(ref AF.hi, 0);
+					ResetBit(ref AF.hi, 0);
 					break;
 				case 0x88://res 1, b
-					Reset(ref BC.hi, 1);
+					ResetBit(ref BC.hi, 1);
 					break;
 				case 0x89://res 1, c
-					Reset(ref BC.lo, 1);
+					ResetBit(ref BC.lo, 1);
 					break;
 				case 0x8A://res 1, d
-					Reset(ref DE.hi, 1);
+					ResetBit(ref DE.hi, 1);
 					break;
 				case 0x8B://res 1, e
-					Reset(ref DE.lo, 1);
+					ResetBit(ref DE.lo, 1);
 					break;
 				case 0x8C://res 1, h
-					Reset(ref HL.hi, 1);
+					ResetBit(ref HL.hi, 1);
 					break;
 				case 0x8D://res 1, l
-					Reset(ref HL.lo, 1);
+					ResetBit(ref HL.lo, 1);
 					break;
 				case 0x8E://res 1, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_1));
 					break;
 				case 0x8F://res 1, a
-					Reset(ref AF.hi, 1);
+					ResetBit(ref AF.hi, 1);
 					break;
 				case 0x90://res 2, b
-					Reset(ref BC.hi, 2);
+					ResetBit(ref BC.hi, 2);
 					break;
 				case 0x91://res 2, c
-					Reset(ref BC.lo, 2);
+					ResetBit(ref BC.lo, 2);
 					break;
 				case 0x92://res 2, d
-					Reset(ref DE.hi, 2);
+					ResetBit(ref DE.hi, 2);
 					break;
 				case 0x93://res 2, e
-					Reset(ref DE.lo, 2);
+					ResetBit(ref DE.lo, 2);
 					break;
 				case 0x94://res 2, h
-					Reset(ref HL.hi, 2);
+					ResetBit(ref HL.hi, 2);
 					break;
 				case 0x95://res 2, l
-					Reset(ref HL.lo, 2);
+					ResetBit(ref HL.lo, 2);
 					break;
 				case 0x96://res 2, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_2));
 					break;
 				case 0x97://res 2, a
-					Reset(ref AF.hi, 2);
+					ResetBit(ref AF.hi, 2);
 					break;
 				case 0x98://res 3, b
-					Reset(ref BC.hi, 3);
+					ResetBit(ref BC.hi, 3);
 					break;
 				case 0x99://res 3, c
-					Reset(ref BC.lo, 3);
+					ResetBit(ref BC.lo, 3);
 					break;
 				case 0x9A://res 3, d
-					Reset(ref DE.hi, 3);
+					ResetBit(ref DE.hi, 3);
 					break;
 				case 0x9B://res 3, e
-					Reset(ref DE.lo, 3);
+					ResetBit(ref DE.lo, 3);
 					break;
 				case 0x9C://res 3, h
-					Reset(ref HL.hi, 3);
+					ResetBit(ref HL.hi, 3);
 					break;
 				case 0x9D://res 3, l
-					Reset(ref HL.lo, 3);
+					ResetBit(ref HL.lo, 3);
 					break;
 				case 0x9E://res 3, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_3));
 					break;
 				case 0x9F://res 3, a
-					Reset(ref AF.hi, 3);
+					ResetBit(ref AF.hi, 3);
 					break;
 				case 0xA0://res 4, b
-					Reset(ref BC.hi, 4);
+					ResetBit(ref BC.hi, 4);
 					break;
 				case 0xA1://res 4, c
-					Reset(ref BC.lo, 4);
+					ResetBit(ref BC.lo, 4);
 					break;
 				case 0xA2://res 4, d
-					Reset(ref DE.hi, 4);
+					ResetBit(ref DE.hi, 4);
 					break;
 				case 0xA3://res 4, e
-					Reset(ref DE.lo, 4);
+					ResetBit(ref DE.lo, 4);
 					break;
 				case 0xA4://res 4, h
-					Reset(ref HL.hi, 4);
+					ResetBit(ref HL.hi, 4);
 					break;
 				case 0xA5://res 4, l
-					Reset(ref HL.lo, 4);
+					ResetBit(ref HL.lo, 4);
 					break;
 				case 0xA6://res 4, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_4));
 					break;
 				case 0xA7://res 4, a
-					Reset(ref AF.hi, 4);
+					ResetBit(ref AF.hi, 4);
 					break;
 				case 0xA8://res 5, b
-					Reset(ref BC.hi, 5);
+					ResetBit(ref BC.hi, 5);
 					break;
 				case 0xA9://res 5, c
-					Reset(ref BC.lo, 5);
+					ResetBit(ref BC.lo, 5);
 					break;
 				case 0xAA://res 5, d
-					Reset(ref DE.hi, 5);
+					ResetBit(ref DE.hi, 5);
 					break;
 				case 0xAB://res 5, e
-					Reset(ref DE.lo, 5);
+					ResetBit(ref DE.lo, 5);
 					break;
 				case 0xAC://res 5, h
-					Reset(ref HL.hi, 5);
+					ResetBit(ref HL.hi, 5);
 					break;
 				case 0xAD://res 5, l
-					Reset(ref HL.lo, 5);
+					ResetBit(ref HL.lo, 5);
 					break;
 				case 0xAE://res 5, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_5));
 					break;
 				case 0xAF://res 5, a
-					Reset(ref AF.hi, 5);
+					ResetBit(ref AF.hi, 5);
 					break;
 				case 0xB0://res 6, b
-					Reset(ref BC.hi, 6);
+					ResetBit(ref BC.hi, 6);
 					break;
 				case 0xB1://res 6, c
-					Reset(ref BC.lo, 6);
+					ResetBit(ref BC.lo, 6);
 					break;
 				case 0xB2://res 6, d
-					Reset(ref DE.hi, 6);
+					ResetBit(ref DE.hi, 6);
 					break;
 				case 0xB3://res 6, e
-					Reset(ref DE.lo, 6);
+					ResetBit(ref DE.lo, 6);
 					break;
 				case 0xB4://res 6, h
-					Reset(ref HL.hi, 6);
+					ResetBit(ref HL.hi, 6);
 					break;
 				case 0xB5://res 6, l
-					Reset(ref HL.lo, 6);
+					ResetBit(ref HL.lo, 6);
 					break;
 				case 0xB6://res 6, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_6));
 					break;
 				case 0xB7://res 6, a
-					Reset(ref AF.hi, 6);
+					ResetBit(ref AF.hi, 6);
 					break;
 				case 0xB8://res 7, b
-					Reset(ref BC.hi, 7);
+					ResetBit(ref BC.hi, 7);
 					break;
 				case 0xB9://res 7, c
-					Reset(ref BC.lo, 7);
+					ResetBit(ref BC.lo, 7);
 					break;
 				case 0xBA://res 7, d
-					Reset(ref DE.hi, 7);
+					ResetBit(ref DE.hi, 7);
 					break;
 				case 0xBB://res 7, e
-					Reset(ref DE.lo, 7);
+					ResetBit(ref DE.lo, 7);
 					break;
 				case 0xBC://res 7, h
-					Reset(ref HL.hi, 7);
+					ResetBit(ref HL.hi, 7);
 					break;
 				case 0xBD://res 7, l
-					Reset(ref HL.lo, 7);
+					ResetBit(ref HL.lo, 7);
 					break;
 				case 0xBE://res 7, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) & RESET_7));
 					break;
 				case 0xBF://res 7, a
-					Reset(ref AF.hi, 7);
+					ResetBit(ref AF.hi, 7);
 					break;
 				#endregion
 				#region Set
 				case 0xC0://set 0, b
-					Set(ref BC.hi, 0);
+					SetBit(ref BC.hi, 0);
 					break;
 				case 0xC1://set 0, c
-					Set(ref BC.lo, 0);
+					SetBit(ref BC.lo, 0);
 					break;
 				case 0xC2://set 0, d
-					Set(ref DE.hi, 0);
+					SetBit(ref DE.hi, 0);
 					break;
 				case 0xC3://set 0, e
-					Set(ref DE.lo, 0);
+					SetBit(ref DE.lo, 0);
 					break;
 				case 0xC4://set 0, h
-					Set(ref HL.hi, 0);
+					SetBit(ref HL.hi, 0);
 					break;
 				case 0xC5://set 0, l
-					Set(ref HL.lo, 0);
+					SetBit(ref HL.lo, 0);
 					break;
 				case 0xC6://set 0, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_0));
 					break;
 				case 0xC7://set 0, a
-					Set(ref AF.hi, 0);
+					SetBit(ref AF.hi, 0);
 					break;
 				case 0xC8://set 1, b
-					Set(ref BC.hi, 1);
+					SetBit(ref BC.hi, 1);
 					break;
 				case 0xC9://set 1, c
-					Set(ref BC.lo, 1);
+					SetBit(ref BC.lo, 1);
 					break;
 				case 0xCA://set 1, d
-					Set(ref DE.hi, 1);
+					SetBit(ref DE.hi, 1);
 					break;
 				case 0xCB://set 1, e
-					Set(ref DE.lo, 1);
+					SetBit(ref DE.lo, 1);
 					break;
 				case 0xCC://set 1, h
-					Set(ref HL.hi, 1);
+					SetBit(ref HL.hi, 1);
 					break;
 				case 0xCD://set 1, l
-					Set(ref HL.lo, 1);
+					SetBit(ref HL.lo, 1);
 					break;
 				case 0xCE://set 1, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_1));
 					break;
 				case 0xCF://set 1, a
-					Set(ref AF.hi, 1);
+					SetBit(ref AF.hi, 1);
 					break;
 				case 0xD0://set 2, b
-					Set(ref BC.hi, 2);
+					SetBit(ref BC.hi, 2);
 					break;
 				case 0xD1://set 2, c
-					Set(ref BC.lo, 2);
+					SetBit(ref BC.lo, 2);
 					break;
 				case 0xD2://set 2, d
-					Set(ref DE.hi, 2);
+					SetBit(ref DE.hi, 2);
 					break;
 				case 0xD3://set 2, e
-					Set(ref DE.lo, 2);
+					SetBit(ref DE.lo, 2);
 					break;
 				case 0xD4://set 2, h
-					Set(ref HL.hi, 2);
+					SetBit(ref HL.hi, 2);
 					break;
 				case 0xD5://set 2, l
-					Set(ref HL.lo, 2);
+					SetBit(ref HL.lo, 2);
 					break;
 				case 0xD6://set 2, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_2));
 					break;
 				case 0xD7://set 2, a
-					Set(ref AF.hi, 2);
+					SetBit(ref AF.hi, 2);
 					break;
 				case 0xD8://set 3, b
-					Set(ref BC.hi, 3);
+					SetBit(ref BC.hi, 3);
 					break;
 				case 0xD9://set 3, c
-					Set(ref BC.lo, 3);
+					SetBit(ref BC.lo, 3);
 					break;
 				case 0xDA://set 3, d
-					Set(ref DE.hi, 3);
+					SetBit(ref DE.hi, 3);
 					break;
 				case 0xDB://set 3, e
-					Set(ref DE.lo, 3);
+					SetBit(ref DE.lo, 3);
 					break;
 				case 0xDC://set 3, h
-					Set(ref HL.hi, 3);
+					SetBit(ref HL.hi, 3);
 					break;
 				case 0xDD://set 3, l
-					Set(ref HL.lo, 3);
+					SetBit(ref HL.lo, 3);
 					break;
 				case 0xDE://set 3, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_3));
 					break;
 				case 0xDF://set 3, a
-					Set(ref AF.hi, 3);
+					SetBit(ref AF.hi, 3);
 					break;
 				case 0xE0://set 4, b
-					Set(ref BC.hi, 4);
+					SetBit(ref BC.hi, 4);
 					break;
 				case 0xE1://set 4, c
-					Set(ref BC.lo, 4);
+					SetBit(ref BC.lo, 4);
 					break;
 				case 0xE2://set 4, d
-					Set(ref DE.hi, 4);
+					SetBit(ref DE.hi, 4);
 					break;
 				case 0xE3://set 4, e
-					Set(ref DE.lo, 4);
+					SetBit(ref DE.lo, 4);
 					break;
 				case 0xE4://set 4, h
-					Set(ref HL.hi, 4);
+					SetBit(ref HL.hi, 4);
 					break;
 				case 0xE5://set 4, l
-					Set(ref HL.lo, 4);
+					SetBit(ref HL.lo, 4);
 					break;
 				case 0xE6://set 4, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_4));
 					break;
 				case 0xE7://set 4, a
-					Set(ref AF.hi, 4);
+					SetBit(ref AF.hi, 4);
 					break;
 				case 0xE8://set 5, b
-					Set(ref BC.hi, 5);
+					SetBit(ref BC.hi, 5);
 					break;
 				case 0xE9://set 5, c
-					Set(ref BC.lo, 5);
+					SetBit(ref BC.lo, 5);
 					break;
 				case 0xEA://set 5, d
-					Set(ref DE.hi, 5);
+					SetBit(ref DE.hi, 5);
 					break;
 				case 0xEB://set 5, e
-					Set(ref DE.lo, 5);
+					SetBit(ref DE.lo, 5);
 					break;
 				case 0xEC://set 5, h
-					Set(ref HL.hi, 5);
+					SetBit(ref HL.hi, 5);
 					break;
 				case 0xED://set 5, l
-					Set(ref HL.lo, 5);
+					SetBit(ref HL.lo, 5);
 					break;
 				case 0xEE://set 5, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_5));
 					break;
 				case 0xEF://set 5, a
-					Set(ref AF.hi, 5);
+					SetBit(ref AF.hi, 5);
 					break;
 				case 0xF0://set 6, b
-					Set(ref BC.hi, 6);
+					SetBit(ref BC.hi, 6);
 					break;
 				case 0xF1://set 6, c
-					Set(ref BC.lo, 6);
+					SetBit(ref BC.lo, 6);
 					break;
 				case 0xF2://set 6, d
-					Set(ref DE.hi, 6);
+					SetBit(ref DE.hi, 6);
 					break;
 				case 0xF3://set 6, e
-					Set(ref DE.lo, 6);
+					SetBit(ref DE.lo, 6);
 					break;
 				case 0xF4://set 6, h
-					Set(ref HL.hi, 6);
+					SetBit(ref HL.hi, 6);
 					break;
 				case 0xF5://set 6, l
-					Set(ref HL.lo, 6);
+					SetBit(ref HL.lo, 6);
 					break;
 				case 0xF6://set 6, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_6));
 					break;
 				case 0xF7://set 6, a
-					Set(ref AF.hi, 6);
+					SetBit(ref AF.hi, 6);
 					break;
 				case 0xF8://set 7, b
-					Set(ref BC.hi, 7);
+					SetBit(ref BC.hi, 7);
 					break;
 				case 0xF9://set 7, c
-					Set(ref BC.lo, 7);
+					SetBit(ref BC.lo, 7);
 					break;
 				case 0xFA://set 7, d
-					Set(ref DE.hi, 7);
+					SetBit(ref DE.hi, 7);
 					break;
 				case 0xFB://set 7, e
-					Set(ref DE.lo, 7);
+					SetBit(ref DE.lo, 7);
 					break;
 				case 0xFC://set 7, h
-					Set(ref HL.hi, 7);
+					SetBit(ref HL.hi, 7);
 					break;
 				case 0xFD://set 7, l
-					Set(ref HL.lo, 7);
+					SetBit(ref HL.lo, 7);
 					break;
 				case 0xFE://set 7, [hl]
 					WriteMMU(HL.w, (byte)(ReadMMU(HL.w) | SET_7));
 					break;
 				case 0xFF://set 7, a
-					Set(ref AF.hi, 7);
+					SetBit(ref AF.hi, 7);
 					break;
 				#endregion
 			}
 		}
 
+		/// <summary>
+		/// Checks for any interrupts. If an interrupt is handled, the PC is reset to the specified interrupt vector.
+		/// </summary>
 		private void CheckInterrupts()
 		{
 			InterruptType iType = interruptManager.FetchNextInterrupt(state);
@@ -1810,7 +1831,7 @@ namespace GBEmu.Emulator
 						break;
 				}
 				//Is this for reading from the int vector table (using ReadMMU for low and high bytes of address)?
-				CycleCounter += 8;
+				UpdateSystemTime(8);
 				Push(PC.w);
 				PCChange(intVector);
 				interruptManager.DisableInterrupts();
@@ -1818,16 +1839,31 @@ namespace GBEmu.Emulator
 			}
 		}
 
+		/// <summary>
+		/// Updates the MMU with the time, in cycles, taken since the last MMU update.
+		/// </summary>
+		/// <remarks>
+		/// This is to ensure that certain events take place 'concurrently' with the CPU's operation.
+		/// </remarks>
+		/// <param name="cyclesTaken">The amount of cycles passed since the last update.</param>
+		private void UpdateSystemTime(int cyclesTaken)
+		{
+			mmu.UpdateCounter(cyclesTaken);
+			CyclesSinceLastUpdate += cyclesTaken;
+		}
+		#endregion
+
 		#region Reading and writing
 		/// <summary>
 		/// Read a byte from the MMU. Takes 4 cycles to complete.
 		/// </summary>
 		/// <param name="address">The address of the source.</param>
-		/// <returns>The byte at the address, or 0xFF if the read failed.</returns>
+		/// <returns>The byte at the address.</returns>
 		private byte ReadMMU(ushort address)
 		{
-			CycleCounter += 4;
-			return mmu.Read(address);
+			byte x = mmu.Read(address);
+			UpdateSystemTime(4);
+			return x;
 		}
 		/// <summary>
 		/// Writes a byte to a given address. Takes 4 cycles to complete.
@@ -1836,8 +1872,26 @@ namespace GBEmu.Emulator
 		/// <param name="data">The byte to write.</param>
 		private void WriteMMU(ushort address, byte data)
 		{
-			CycleCounter += 4;
 			mmu.Write(address, data);
+			UpdateSystemTime(4);
+		}
+		/// <summary>
+		/// Read a byte from the specified port (in the range 0xFF00-0xFFFF). Takes 4 cycles to complete.
+		/// </summary>
+		/// <param name="port">The port number to read from.</param>
+		/// <returns>The byte at the address.</returns>
+		private byte ReadPort(byte port)
+		{
+			return ReadMMU((ushort)(0xFF00 | port));
+		}
+		/// <summary>
+		/// Writes a byte to a given port (in the range 0xFF00-0xFFFF). Takes 4 cycles to complete.
+		/// </summary>
+		/// <param name="port">The port number to write to.</param>
+		/// <param name="data">The byte to write.</param>
+		private void WritePort(byte port, byte data)
+		{
+			WriteMMU((ushort)(0xFF00 | port), data);
 		}
 		/// <summary>
 		/// Reads a word using the Program Counter as an address, and increments the PC. Takes 8 cycles to complete.
@@ -1895,8 +1949,8 @@ namespace GBEmu.Emulator
 		/// <param name="newAddress">The new address the PC will point to.</param>
 		private void PCChange(ushort newAddress)
 		{
-			CycleCounter += 4;
 			PC.w = newAddress;
+			UpdateSystemTime(4);
 		}
 		#endregion
 
@@ -2139,8 +2193,8 @@ namespace GBEmu.Emulator
 		/// <param name="register">The register to increment.</param>
 		private void Inc16(ref ushort register)
 		{
-			CycleCounter += 4;
 			register++;
+			UpdateSystemTime(4);
 		}
 		/// <summary>
 		/// Decrements the given 16-bit register. Takes 4 cycles to complete.
@@ -2154,8 +2208,8 @@ namespace GBEmu.Emulator
 		/// <param name="register">The register to decrement.</param>
 		private void Dec16(ref ushort register)
 		{
-			CycleCounter += 4;
 			register--;
+			UpdateSystemTime(4);
 		}
 		/// <summary>
 		/// Adds the given 16-bit register to HL. Takes 4 cycle to complete.
@@ -2172,7 +2226,7 @@ namespace GBEmu.Emulator
 		/// <param name="register"></param>
 		private void AddHL(ushort register)
 		{
-			CycleCounter += 4;
+			
 			int temp = HL.w + register;
 
 			IsNegativeOp = false;
@@ -2181,6 +2235,7 @@ namespace GBEmu.Emulator
 			IsCarry = ((temp & 0x10000) != 0);
 			
 			HL.w += register;
+			UpdateSystemTime(4);
 		}
 		/// <summary>
 		/// Calculates the result of adding the immediate byte from the PC (as a signed value) to the Stack Pointer. Takes 8 cycles to complete.
@@ -2192,7 +2247,6 @@ namespace GBEmu.Emulator
 		/// <returns>SP plus the signed value.</returns>
 		private ushort AddSPImmediate()
 		{
-			CycleCounter += 4;
 			//1: Cast regular byte as sbyte - MSB is interpreted as sign bit, same value
 			//2: Cast to int (signed -> signed of larger size sign-extends)
 			//Ex: 1000 0000 -> 1111 1111 1111 1111 1111 1111 1000 0000
@@ -2204,6 +2258,7 @@ namespace GBEmu.Emulator
 			IsNegativeOp = false;
 			IsHalfCarry = (tempXOR & 0x10) != 0;
 			IsCarry = (tempXOR & 0x100) != 0;
+			UpdateSystemTime(4);
 			return (ushort)sum;
 		}
 		/// <summary>
@@ -2436,7 +2491,7 @@ namespace GBEmu.Emulator
 		/// </remarks>
 		/// <param name="register">The register to use.</param>
 		/// <param name="bitNumber">The bit number to test.</param>
-		private void Bit(byte register, int bitNumber)
+		private void TestBit(byte register, int bitNumber)
 		{
 			IsNegativeOp = false;
 			IsHalfCarry = true;
@@ -2453,7 +2508,7 @@ namespace GBEmu.Emulator
 		/// </remarks>
 		/// <param name="register">The register to use.</param>
 		/// <param name="bitNumber">The bit number to set.</param>
-		private void Set(ref byte register, int bitNumber)
+		private void SetBit(ref byte register, int bitNumber)
 		{
 			register |= (byte)(1 << bitNumber);
 		}
@@ -2468,7 +2523,7 @@ namespace GBEmu.Emulator
 		/// </remarks>
 		/// <param name="register">The register to use.</param>
 		/// <param name="bitNumber">The bit number to reset.</param>
-		private void Reset(ref byte register, int bitNumber)
+		private void ResetBit(ref byte register, int bitNumber)
 		{
 			register &= (byte)(~(1 << bitNumber));
 		}
@@ -2481,10 +2536,10 @@ namespace GBEmu.Emulator
 		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void JumpImmediate(bool isCondTrue)
 		{
-			ushort x = ReadPCWord();
+			ushort nextWord = ReadPCWord();
 			if (isCondTrue)
 			{
-				PCChange(x);
+				PCChange(nextWord);
 			}
 		}
 		/// <summary>
@@ -2493,10 +2548,10 @@ namespace GBEmu.Emulator
 		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void JumpRelative(bool isCondTrue)
 		{
-			sbyte off = (sbyte)ReadPC();
+			sbyte signedOffset = (sbyte)ReadPC();
 			if (isCondTrue)
 			{
-				PCChange((ushort)(PC.w + off));
+				PCChange((ushort)(PC.w + signedOffset));
 			}
 		}
 		/// <summary>
@@ -2505,11 +2560,11 @@ namespace GBEmu.Emulator
 		/// <param name="IsCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void Call(bool IsCondTrue)
 		{
-			ushort x = ReadPCWord();
+			ushort callAddress = ReadPCWord();
 			if (IsCondTrue)
 			{
 				Push(PC.w);
-				PCChange(x);
+				PCChange(callAddress);
 			}
 		}
 		/// <summary>
@@ -2518,9 +2573,9 @@ namespace GBEmu.Emulator
 		/// <param name="enableInterrupts">Set if this is a RETI instruction.</param>
 		private void Return(bool enableInterrupts)
 		{
-			ushort w = 0;
-			Pop(ref w);
-			PCChange(w);
+			ushort returnAddress = 0;
+			Pop(ref returnAddress);
+			PCChange(returnAddress);
 			state = CPUState.Normal;
 			if (enableInterrupts) interruptManager.EnableInterrupts();
 		}
@@ -2530,7 +2585,7 @@ namespace GBEmu.Emulator
 		/// <param name="isCondTrue">Conditional check on call (Ex: IsCarry)</param>
 		private void CheckedReturn(bool isCondTrue)
 		{
-			CycleCounter += 4;
+			UpdateSystemTime(4);
 			if (isCondTrue)
 			{
 				Return(false);
@@ -2540,7 +2595,7 @@ namespace GBEmu.Emulator
 		/// Pushes the current address and jumps to the given jump vector. Takes 12 cycles to complete.
 		/// </summary>
 		/// <param name="jumpVector">The vector to jump to.</param>
-		private void RST(byte jumpVector)
+		private void Reset(byte jumpVector)
 		{
 			Push(PC.w);
 			PCChange((ushort)(jumpVector & 0x38));
@@ -2569,20 +2624,22 @@ namespace GBEmu.Emulator
 		/// </summary>
 		private void Stop()
 		{
+			//Stop doesn't increment the PC, and turns off the LCD(not implemented.)
+			//Also, speed switch occurs after stop is used (CGB, not implemented.).
 			//state = CPUState.Stop;
 			PC.w++;
 		}
 		/// <summary>
 		/// Disables interrupts.
 		/// </summary>
-		private void DI()
+		private void DisableInterrupts()
 		{
 			interruptManager.DisableInterrupts();
 		}
 		/// <summary>
 		/// Enables interrupts.
 		/// </summary>
-		private void EI()
+		private void EnableInterrupts()
 		{
 			interruptManager.EnableInterrupts();
 		}
@@ -2595,7 +2652,7 @@ namespace GBEmu.Emulator
 		/// H is reset.
 		/// C is flipped.
 		/// </remarks>
-		private void CCF()
+		private void ComplementCarryFlag()
 		{
 			IsHalfCarry = false;
 			IsNegativeOp = false;
@@ -2610,7 +2667,7 @@ namespace GBEmu.Emulator
 		/// H is reset.
 		/// C is set.
 		/// </remarks>
-		private void SCF()
+		private void SetCarryFlag()
 		{
 			IsNegativeOp = false;
 			IsHalfCarry = false;
@@ -2641,7 +2698,7 @@ namespace GBEmu.Emulator
 		private void PushRegister(ushort pushData)
 		{
 			Push(pushData);
-			CycleCounter += 4;
+			UpdateSystemTime(4);
 		}
 		/// <summary>
 		/// Pops a word off the stack to the given location. Takes 8 cycles to complete.
@@ -2657,5 +2714,6 @@ namespace GBEmu.Emulator
 		}
 		#endregion
 		#endregion
+
 	}
 }

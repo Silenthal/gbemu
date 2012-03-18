@@ -272,13 +272,10 @@ namespace GBEmu.Emulator
 
 		public override void UpdateCounter(int cycles)
 		{
-			if (cycles > 0)
-			{
-				CycleCounter += cycles;
-				LCD.UpdateCounter(cycles);
-				timer.UpdateCounter(cycles);
-				serial.UpdateCounter(cycles);
-			}
+			if (cycles <= 0) return;
+			LCD.UpdateCounter(cycles);
+			timer.UpdateCounter(cycles);
+			serial.UpdateCounter(cycles);
 		}
 	}
 }

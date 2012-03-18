@@ -2,7 +2,8 @@
 {
 	class MBC2 : Cart
 	{
-		public MBC2(byte[] romFile) : base(romFile)
+		public MBC2(byte[] romFile, CartFeatures cartFeatures)
+			: base(romFile, cartFeatures)
 		{
 
 		}

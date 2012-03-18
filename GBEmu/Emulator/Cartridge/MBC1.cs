@@ -4,7 +4,8 @@
 	{
 		private bool RamBankMode;
 
-		public MBC1(byte[] inFile) : base(inFile)
+		public MBC1(byte[] inFile, CartFeatures cartFeatures)
+			: base(inFile, cartFeatures)
 		{
 			RamBankMode = false;
 		}

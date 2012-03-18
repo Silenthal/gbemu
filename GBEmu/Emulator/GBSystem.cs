@@ -51,7 +51,7 @@ namespace GBEmu.Emulator
 				if (state == GBSystemState.Paused) continue;
 				stopwatch.Reset();
 				stopwatch.Start();
-				cpu.step(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
+				cpu.RunFor(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
 				ExecutedFrames++;
 				while (stopwatch.Elapsed < frame) { }
 				screen.RenderFrame();

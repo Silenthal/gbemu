@@ -153,6 +153,10 @@
 			}
 		}
 
+		/// <summary>
+		/// Sets the timer cycles to reflect the current time, taken off the CPU's total running time.
+		/// </summary>
+		/// <param name="resolution">The number of cycles to run before incrementing TIMA, as specified in the timing table.</param>
 		private void ReinitializeTimer(int resolution)
 		{
 			TAC_TimerCycles = CycleCounter % resolution;

@@ -82,23 +82,23 @@ namespace GBEmu.Emulator.Cartridge
 				case CartridgeType.ROM_R:
 				case CartridgeType.ROM_RB:
 				default:
-					returnedCart = new PlainCart(romFile);
+					returnedCart = new PlainCart(romFile, FeatureList[cs]);
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_R:
 				case CartridgeType.MBC1_RB:
-					returnedCart = new MBC1(romFile);
+					returnedCart = new MBC1(romFile, FeatureList[cs]);
 					break;
 				case CartridgeType.MBC2:
 				case CartridgeType.MBC2_B:
-					returnedCart = new MBC2(romFile);
+					returnedCart = new MBC2(romFile, FeatureList[cs]);
 					break;
 				case CartridgeType.MBC3:
 				case CartridgeType.MBC3_TB:
 				case CartridgeType.MBC3_TRB:
 				case CartridgeType.MBC3_R:
 				case CartridgeType.MBC3_RB:
-					returnedCart = new MBC3(romFile);
+					returnedCart = new MBC3(romFile, FeatureList[cs]);
 					break;
 				case CartridgeType.MBC5:
 				case CartridgeType.MBC5_M:
@@ -106,11 +106,10 @@ namespace GBEmu.Emulator.Cartridge
 				case CartridgeType.MBC5_MRB:
 				case CartridgeType.MBC5_R:
 				case CartridgeType.MBC5_RB:
-					returnedCart = new MBC5(romFile);
+					returnedCart = new MBC5(romFile, FeatureList[cs]);
 					break;
 			}
 			#endregion
-			returnedCart.features = FeatureList[cs];
 			return returnedCart;
 		}
 	}
@@ -131,10 +130,11 @@ namespace GBEmu.Emulator.Cartridge
 		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
 
 		protected byte[,] CartRam; // 0xA000 - 0xBFFF
-		protected byte CartRamBank = 0;
+		protected byte CartRamBank;
 
-		protected Cart(byte[] inFile)
+		protected Cart(byte[] inFile, CartFeatures cartFeatures)
 		{
+			features = cartFeatures;
 			romFile = new byte[inFile.Length];
 			Array.Copy(inFile, romFile, inFile.Length);
 			InitializeOutsideRAM();
@@ -144,6 +144,7 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected virtual void InitializeOutsideRAM()
 		{
+			CartRamBank = 0;
 			if (RamPresent)
 			{
 				switch (romFile[0x149])
@@ -187,7 +188,10 @@ namespace GBEmu.Emulator.Cartridge
 		protected virtual byte CartRamRead(int position)
 		{
 			if (!RamEnabled) return 0;
-			if ((position - 0xA000) >= CartRam.GetLength(1)) return 0;
+			if ((position - 0xA000) >= CartRam.GetLength(1))
+			{
+				return 0;
+			}
 			return CartRam[CartRamBank, position - 0xA000];
 		}
 

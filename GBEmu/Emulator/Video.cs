@@ -23,7 +23,14 @@ namespace GBEmu.Emulator
 		/// Represents the Y offset of the sprite.
 		/// </summary>
 		public int YOffset;
-		public int TileIndex;
+		/// <summary>
+		/// Contains the tile's offset in VRAM.
+		/// </summary>
+		/// <remarks>
+		/// If in 8x16 mode, this offset is ANDed with 0xFE0 for the top tile,
+		/// and ORed with 0x010 for the bottom tile.
+		/// </remarks>
+		public int TileOffset;
 		public int SpriteProperties;
 		public bool XFlip
 		{
@@ -80,6 +87,7 @@ namespace GBEmu.Emulator
 			return left.XOffset != right.XOffset ? left.XOffset > right.XOffset : left.OAMIndex > right.OAMIndex;
 		}
 	}
+
 
 	public class LYCounter : TimedIODevice
 	{
@@ -266,6 +274,13 @@ namespace GBEmu.Emulator
 			}
 
 		}//Bit 2
+		private int SpriteHeight
+		{
+			get
+			{
+				return (LCDControl & 0x04) == 0 ? 8 : 16;
+			}
+		}
 		/// <summary>
 		/// Indicates whether sprites are drawn. Set to false to disable sprite drawing.
 		/// </summary>
@@ -504,7 +519,7 @@ namespace GBEmu.Emulator
 
 		private SpriteInfo[] SpriteInfoTable;
 		
-		private static int SpriteInfoSize = 4;
+		private int[] BackgroundColorNumOnScanline;
 
 		public Video(InterruptManager iM, IRenderable newScreen)
 		{
@@ -527,6 +542,7 @@ namespace GBEmu.Emulator
 			{
 				LCDMap[i] = DMGPredefColor.Black;
 			}
+			BackgroundColorNumOnScanline = new int[LCDWidth];
 			LCDControl = 0x91;
 			LCDStatus = 0x80;
 			ScrollX = 0x00;
@@ -886,6 +902,7 @@ namespace GBEmu.Emulator
 				if (isSignedTileIndex) TileIndex += 0x80;
 				int TileOffset = BGWinTileDataStart + (TileIndex * 0x10);
 				int TilePixelColor = GetPixelPaletteNumberFromTile(TileOffset, MapPixelX & 0x7, MapPixelY & 0x7, false, false);
+				BackgroundColorNumOnScanline[LCD_X] = TilePixelColor;
 				SetPixel(LCD_X, LY, BGPalette_DMG[TilePixelColor]);
 			}
 		}
@@ -906,6 +923,7 @@ namespace GBEmu.Emulator
 				if (isSignedTileIndex) TileIndex += 0x80;
 				int TileOffset = BGWinTileDataStart + (TileIndex * 0x10);
 				int TilePixelColor = GetPixelPaletteNumberFromTile(TileOffset, MapPixelX & 0x7, MapPixelY & 0x7, false, false);
+				BackgroundColorNumOnScanline[LCD_X] = TilePixelColor;
 				SetPixel(LCD_X, LY, BGPalette_DMG[TilePixelColor]);
 			}
 		}
@@ -922,34 +940,33 @@ namespace GBEmu.Emulator
 			for (int i = 0; i < SpriteInfoTable.Length; i++)
 			{
 				SpriteInfo r = SpriteInfoTable[i];
-				if (LY >= r.YOffset - 16 && LY < r.YOffset) //If the sprite intersects LY...
+				if (LY >= r.YOffset && LY < r.YOffset + SpriteHeight) //If the sprite intersects LY...
 				{
 					LineSpriteCount++;//Increment the sprite count for the line.
-					int SpritePixelY = LY - (r.YOffset - 16);
-					if (!Sprite8By16Mode && SpritePixelY >= 8) continue;
+					int SpritePixelY = LY - r.YOffset;
 					//The sprite will be drawn if the sprite is within the screen and LCD_X has not passed it.
 					if ((r.XOffset < LCDWidth) && (LCD_X < r.XOffset))
 					{
-						if (LCD_X < r.XOffset - 8)
+						if (LCD_X < r.XOffset)
 						{
-							LCD_X = r.XOffset - 8;
+							LCD_X = r.XOffset;
 						}
-						for (; LCD_X < r.XOffset; LCD_X++)
+						for (; LCD_X < r.XOffset + 8; LCD_X++)
 						{
-							int SpritePixelX = LCD_X - (r.XOffset - 8);
-							int TileIndex = r.TileIndex;
+							int SpritePixelX = LCD_X - r.XOffset;
+							int TileOffset = r.TileOffset;
 							if (SpritePixelY >= 8 && Sprite8By16Mode)
 							{
 								SpritePixelY -= 8;
-								TileIndex |= 0x1;
+								TileOffset |= 0x10;
 							}
-							int SpritePixelNum = GetPixelPaletteNumberFromTile(TileIndex * 0x10, SpritePixelX, SpritePixelY, r.XFlip, r.YFlip);
+							int SpriteColorNum = GetPixelPaletteNumberFromTile(TileOffset, SpritePixelX, SpritePixelY, r.XFlip, r.YFlip);
 							//PriorityOverBG : Sprites are draw over BG, except in the case of color 0.
 							//!PriorityOverBG : Sprites aren't drawn over BG, except when BG color is white (?)
-							if (SpritePixelNum == 0) continue;
-							if (r.PriorityOverBG || GetPixel(LCD_X, LY) == DMGPredefColor.White)
+							if (SpriteColorNum == 0) continue;
+							if (r.PriorityOverBG || BackgroundColorNumOnScanline[LCD_X] == 0)
 							{
-								SetPixel(LCD_X, LY, ObjectPalettes[r.DMGObjectPaletteNum][SpritePixelNum]);
+								SetPixel(LCD_X, LY, ObjectPalettes[r.DMGObjectPaletteNum][SpriteColorNum]);
 							}
 						}
 					}
@@ -985,7 +1002,7 @@ namespace GBEmu.Emulator
 			int spriteCount = 0;
 			for (int i = 0; i < SpriteInfoTable.Length; i++)
 			{
-				if (LY >= SpriteInfoTable[i].YOffset - 16 && LY < SpriteInfoTable[i].YOffset) spriteCount++;
+				if (LY >= SpriteInfoTable[i].YOffset && LY < SpriteInfoTable[i].YOffset + SpriteHeight) spriteCount++;
 
 			}
 			if (spriteCount > 10) spriteCount = 10;
@@ -999,18 +1016,17 @@ namespace GBEmu.Emulator
 		{
 			for (int i = 0; i < SpriteInfoTable.Length; i++)
 			{
-				SpriteInfoTable[i] = new SpriteInfo()
-				{
-					OAMIndex = i * SpriteInfoSize,
-					YOffset = OAM[(i * SpriteInfoSize) + 0],
-					XOffset = OAM[(i * SpriteInfoSize) + 1],
-					TileIndex = OAM[(i * SpriteInfoSize) + 2],
-					SpriteProperties = OAM[(i * SpriteInfoSize) + 3]
-				};
+				int off = i << 2;
+				SpriteInfoTable[i].OAMIndex			= off;
+				SpriteInfoTable[i].YOffset			= OAM[off + 0] - 16;
+				SpriteInfoTable[i].XOffset			= OAM[off + 1] - 8;
+				SpriteInfoTable[i].TileOffset		= OAM[off + 2] << 4;//index * 16 = offset in VRAM of tile
+				SpriteInfoTable[i].SpriteProperties = OAM[off + 3];
 				//-Sprites are sorted by their X position. In the case that their Xs are equal,
-				//-the one with the lower OAM position takes priority.
+				//-the one with the lower OAM position takes priority. Because they are already
+				//'sorted by OAM offset', only Xs need to be compared.
 				int x = i;
-				while (x > 0 && (SpriteInfoTable[x] < SpriteInfoTable[x - 1]))
+				while (x > 0 && (SpriteInfoTable[x].XOffset < SpriteInfoTable[x - 1].XOffset))
 				{
 					SpriteInfo temp = SpriteInfoTable[x - 1];
 					SpriteInfoTable[x - 1] = SpriteInfoTable[x];

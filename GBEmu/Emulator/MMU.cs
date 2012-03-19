@@ -266,7 +266,7 @@ namespace GBEmu.Emulator
 			int startAddress = transferDetails << 8;
 			for (int i = 0; i < 0xA0; i++)
 			{
-				Write(0xFE00 + i, Read(startAddress + i));
+				LCD.OAMDMAWrite(0xFE00 + i, Read(startAddress + i));
 			}
 		}
 

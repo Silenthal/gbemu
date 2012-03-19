@@ -553,7 +553,9 @@ namespace GBEmu.Emulator
 			OBJPalette0_DMG[0] = DMGPredefColor.White;
 			OBJPalette1_DMG = new XnaColor[4];
 			OBJPalette1_DMG[0] = DMGPredefColor.White;
-			ObjectPalettes = new XnaColor[2][] { OBJPalette0_DMG, OBJPalette1_DMG };
+			ObjectPalettes = new XnaColor[2][];
+			ObjectPalettes[0] = OBJPalette0_DMG;
+			ObjectPalettes[1] = OBJPalette1_DMG;
 			UpdateBackgroundPalette();
 			UpdateObjectPalette0();
 			UpdateObjectPalette1();
@@ -813,7 +815,6 @@ namespace GBEmu.Emulator
 			}
 		}
 
-
 		/// <summary>
 		/// Updates the current DMG OBP1 palette.
 		/// </summary>
@@ -822,7 +823,7 @@ namespace GBEmu.Emulator
 			for (int ColorNumber = 1; ColorNumber < 4; ColorNumber++)//Only copy for colors 1-3, because 0 is transparent
 			{
 				int ShadeIndex = (ObjectPalette1Data >> (ColorNumber * 2)) & 0x03; //This contains the shade for Color i
-				OBJPalette0_DMG[ColorNumber] = DMGPredefColor.Colors[ShadeIndex];
+				OBJPalette1_DMG[ColorNumber] = DMGPredefColor.Colors[ShadeIndex];
 			}
 		}
 		#endregion

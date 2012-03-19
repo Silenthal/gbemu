@@ -5,7 +5,6 @@ namespace GBEmu.Emulator
 {
 	public class DMGPredefColor
 	{
-		public static XnaColor Transparent = new XnaColor { A = 0 };
 		public static XnaColor White = XnaColor.White;
 		public static XnaColor LightGrey = XnaColor.LightGray;
 		public static XnaColor DarkGrey = XnaColor.DarkGray;
@@ -70,6 +69,10 @@ namespace GBEmu.Emulator
 		}
 		public static bool operator <(SpriteInfo left, SpriteInfo right)
 		{
+			//If X offset is unequal...
+			//sort by X offset (closer to the left = less)
+			//If X offset is equal...
+			//sort by OAM Index (closer to FF00 = less)
 			return left.XOffset != right.XOffset ? left.XOffset < right.XOffset : left.OAMIndex < right.OAMIndex;
 		}
 		public static bool operator >(SpriteInfo left, SpriteInfo right)
@@ -547,9 +550,9 @@ namespace GBEmu.Emulator
 			ObjectPalette1Data = 0xFF;
 			BGPalette_DMG = new XnaColor[4];
 			OBJPalette0_DMG = new XnaColor[4];
-			OBJPalette0_DMG[0] = DMGPredefColor.Transparent;
+			OBJPalette0_DMG[0] = DMGPredefColor.White;
 			OBJPalette1_DMG = new XnaColor[4];
-			OBJPalette1_DMG[0] = DMGPredefColor.Transparent;
+			OBJPalette1_DMG[0] = DMGPredefColor.White;
 			ObjectPalettes = new XnaColor[2][] { OBJPalette0_DMG, OBJPalette1_DMG };
 			UpdateBackgroundPalette();
 			UpdateObjectPalette0();
@@ -912,31 +915,41 @@ namespace GBEmu.Emulator
 		private void DrawSprites()
 		{
 			int LineSpriteCount = 0;
+			//From constructing the sprite table, the sprites are already sorted by X-offset/OAM index.
+			//Going from left to right mimics them being drawn on the screen.
+			int LCD_X = 0;
 			for (int i = 0; i < SpriteInfoTable.Length; i++)
 			{
 				SpriteInfo r = SpriteInfoTable[i];
 				if (LY >= r.YOffset - 16 && LY < r.YOffset) //If the sprite intersects LY...
 				{
 					LineSpriteCount++;//Increment the sprite count for the line.
-					int SpriteTileY = LY + (r.YOffset - 16);
-					if (!Sprite8By16Mode && SpriteTileY >= 8) continue;
-					for (int LCD_X = r.XOffset - 8; LCD_X < r.XOffset; LCD_X++)
+					int SpritePixelY = LY - (r.YOffset - 16);
+					if (!Sprite8By16Mode && SpritePixelY >= 8) continue;
+					//The sprite will be drawn if the sprite is within the screen and LCD_X has not passed it.
+					if ((r.XOffset < LCDWidth) && (LCD_X < r.XOffset))
 					{
-						if (LCD_X < 0 || LCD_X > LCDWidth) continue;
-						int SpriteTileX = LCD_X - (r.XOffset - 8);
-						int SpriteTileOff = r.TileIndex * 0x10;
-						if (Sprite8By16Mode && SpriteTileY >= 8)//If the sprite is drawing its second tile in 8x16 mode
+						if (LCD_X < r.XOffset - 8)
 						{
-							//Use the second tile offset instead, which is right after the first.
-							SpriteTileY -= 8;
-							SpriteTileOff++;
+							LCD_X = r.XOffset - 8;
 						}
-						int SpritePixelNum = GetPixelPaletteNumberFromTile(SpriteTileOff, SpriteTileX, SpriteTileY, r.XFlip, r.YFlip);
-						//PriorityOverBG : Sprites are draw over BG, except in the case of color 0.
-						//!PriorityOverBG : Sprites aren't drawn over BG, except when BG color is white (?)
-						if (r.PriorityOverBG ? SpritePixelNum != 0 : GetPixel(LCD_X, LY) == DMGPredefColor.White)
+						for (; LCD_X < r.XOffset; LCD_X++)
 						{
-							SetPixel(LCD_X, LY, ObjectPalettes[r.DMGObjectPaletteNum][SpritePixelNum]);
+							int SpritePixelX = LCD_X - (r.XOffset - 8);
+							int TileIndex = r.TileIndex;
+							if (SpritePixelY >= 8 && Sprite8By16Mode)
+							{
+								SpritePixelY -= 8;
+								TileIndex |= 0x1;
+							}
+							int SpritePixelNum = GetPixelPaletteNumberFromTile(TileIndex * 0x10, SpritePixelX, SpritePixelY, r.XFlip, r.YFlip);
+							//PriorityOverBG : Sprites are draw over BG, except in the case of color 0.
+							//!PriorityOverBG : Sprites aren't drawn over BG, except when BG color is white (?)
+							if (SpritePixelNum == 0) continue;
+							if (r.PriorityOverBG || GetPixel(LCD_X, LY) == DMGPredefColor.White)
+							{
+								SetPixel(LCD_X, LY, ObjectPalettes[r.DMGObjectPaletteNum][SpritePixelNum]);
+							}
 						}
 					}
 				}

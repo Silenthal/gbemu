@@ -14,12 +14,18 @@ namespace GBEmu.Render.XNA
 {
 	public class XNARenderWindow : GraphicsDeviceControl, IRenderable
 	{
-		Texture2D canvas;
+		Texture2D[] canvasBuffer;
+		int canvasBufferIndex;
+		int canvasScreenIndex;
 		SpriteBatch spriteBatch;
 
 		protected override void Initialize()
 		{
-			canvas = new Texture2D(GraphicsDevice, 160, 144, false, SurfaceFormat.Color);
+			canvasBuffer = new Texture2D[2];
+			canvasBuffer[0] = new Texture2D(GraphicsDevice, 160, 144, false, SurfaceFormat.Color);
+			canvasBuffer[1] = new Texture2D(GraphicsDevice, 160, 144, false, SurfaceFormat.Color);
+			canvasBufferIndex = 0;
+			canvasScreenIndex = 1;
 			spriteBatch = new SpriteBatch(GraphicsDevice);
 			GraphicsDevice.RasterizerState = RasterizerState.CullNone;
 		}
@@ -28,19 +34,27 @@ namespace GBEmu.Render.XNA
 		{
 			GraphicsDevice.Clear(XnaColor.CornflowerBlue);
 			spriteBatch.Begin(SpriteSortMode.Immediate, null);
-			spriteBatch.Draw(canvas, GraphicsDevice.Viewport.Bounds, canvas.Bounds, Color.White);
+			spriteBatch.Draw(canvasBuffer[canvasScreenIndex], GraphicsDevice.Viewport.Bounds, canvasBuffer[canvasScreenIndex].Bounds, Color.White);
 			spriteBatch.End();
 			GraphicsDevice.Textures[0] = null;
 		}
 
-		public void CopyData(XnaColor[] newData)
+		public void CopyFrameData(uint[] newData)
 		{
-			GraphicsDevice.Textures[0] = null;
-			canvas.SetData<XnaColor>(newData);
+			canvasBuffer[canvasBufferIndex].SetData<uint>(newData);
 		}
 
-		public void RenderFrame()
+		private void SwapBuffer()
 		{
+			int temp = canvasBufferIndex;
+			canvasBufferIndex = canvasScreenIndex;
+			canvasScreenIndex = temp;
+			GraphicsDevice.Textures[0] = null;
+		}
+
+		public void BlitScreen()
+		{
+			SwapBuffer();
 			Invalidate();
 		}
 	}

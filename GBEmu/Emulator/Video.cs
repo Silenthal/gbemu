@@ -1,15 +1,30 @@
-﻿using GBEmu.Render;
-using XnaColor = Microsoft.Xna.Framework.Color;
+﻿using System.Runtime.InteropServices;
+using GBEmu.Render;
 
 namespace GBEmu.Emulator
 {
+	[StructLayout(LayoutKind.Explicit)]
+	public struct ABGRColor
+	{
+		[FieldOffset(0)]
+		public uint ABGRVal;
+		[FieldOffset(0)]
+		public byte Red;
+		[FieldOffset(1)]
+		public byte Green;
+		[FieldOffset(2)]
+		public byte Blue;
+		[FieldOffset(3)]
+		public byte Alpha;
+		public static ABGRColor White = new ABGRColor(){Alpha = 255, Blue = 255, Green = 255, Red = 255};
+		public static ABGRColor LightGrey = new ABGRColor() { Alpha = 255, Blue = 211, Green = 211, Red = 211 };
+		public static ABGRColor DarkGrey = new ABGRColor() { Alpha = 255, Blue = 169, Green = 169, Red = 169 };
+		public static ABGRColor Black = new ABGRColor() { Alpha = 255, Blue = 0, Green = 0, Red = 0 };
+	}
+
 	public class DMGPredefColor
 	{
-		public static XnaColor White = XnaColor.White;
-		public static XnaColor LightGrey = XnaColor.LightGray;
-		public static XnaColor DarkGrey = XnaColor.DarkGray;
-		public static XnaColor Black = XnaColor.Black;
-		public static XnaColor[] Colors = { White, LightGrey, DarkGrey, Black };
+		public static ABGRColor[] Colors = { ABGRColor.White, ABGRColor.LightGrey, ABGRColor.DarkGrey, ABGRColor.Black };
 	}
 
 	public struct SpriteInfo
@@ -445,10 +460,10 @@ namespace GBEmu.Emulator
 		/// [FF49]Contains the color numbers for the sprite palette OBJ1.
 		/// </summary>
 		private byte ObjectPalette1Data;
-		private XnaColor[] BGPalette_DMG;
-		private XnaColor[] OBJPalette0_DMG;
-		private XnaColor[] OBJPalette1_DMG;
-		private XnaColor[][] ObjectPalettes;
+		private ABGRColor[] BGPalette_DMG;
+		private ABGRColor[] OBJPalette0_DMG;
+		private ABGRColor[] OBJPalette1_DMG;
+		private ABGRColor[][] ObjectPalettes;
 		#endregion
 
 		#region Window
@@ -477,7 +492,7 @@ namespace GBEmu.Emulator
 		/// <summary>
 		/// Represents the LCD that is being drawn to.
 		/// </summary>
-		private XnaColor[] LCDMap;
+		private uint[] LCDMap;
 
 		/// <summary>
 		/// [8000-9FFF]Video RAM.
@@ -527,10 +542,10 @@ namespace GBEmu.Emulator
 		#region Initialization
 		private void InitializeLCD()
 		{
-			LCDMap = new XnaColor[LCDArraySize];
+			LCDMap = new uint[LCDArraySize];
 			for (int i = 0; i < LCDMap.Length; i++)
 			{
-				LCDMap[i] = DMGPredefColor.Black;
+				LCDMap[i] = DMGPredefColor.Colors[3].ABGRVal;
 			}
 			BackgroundColorNumOnScanline = new int[LCDWidth];
 			SpritesOnScanline = new SpriteInfo[LCDWidth];
@@ -555,12 +570,12 @@ namespace GBEmu.Emulator
 			BackgroundPaletteData = 0xFC;
 			ObjectPalette0Data = 0xFF;
 			ObjectPalette1Data = 0xFF;
-			BGPalette_DMG = new XnaColor[4];
-			OBJPalette0_DMG = new XnaColor[4];
-			OBJPalette0_DMG[0] = XnaColor.Red;
-			OBJPalette1_DMG = new XnaColor[4];
-			OBJPalette1_DMG[0] = XnaColor.Red;
-			ObjectPalettes = new XnaColor[2][];
+			BGPalette_DMG = new ABGRColor[4];
+			OBJPalette0_DMG = new ABGRColor[4];
+			OBJPalette0_DMG[0] = ABGRColor.White;
+			OBJPalette1_DMG = new ABGRColor[4];
+			OBJPalette1_DMG[0] = ABGRColor.White;
+			ObjectPalettes = new ABGRColor[2][];
 			ObjectPalettes[0] = OBJPalette0_DMG;
 			ObjectPalettes[1] = OBJPalette1_DMG;
 			UpdateBackgroundPalette();
@@ -869,7 +884,7 @@ namespace GBEmu.Emulator
 		{
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				SetPixel(LCD_X, LY, DMGPredefColor.White);
+				SetPixel(LCD_X, LY, ABGRColor.White);
 			}
 		}
 
@@ -880,7 +895,7 @@ namespace GBEmu.Emulator
 		{
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				SetPixel(LCD_X, LY, DMGPredefColor.Black);
+				SetPixel(LCD_X, LY, ABGRColor.Black);
 			}
 		}
 
@@ -1046,9 +1061,9 @@ namespace GBEmu.Emulator
 		/// <param name="xPos">The X position of the pixel.</param>
 		/// <param name="yPos">The Y position of the pixel.</param>
 		/// <param name="color">The color of the pixel.</param>
-		private void SetPixel(int xPos, int yPos, XnaColor color)
+		private void SetPixel(int xPos, int yPos, ABGRColor color)
 		{
-			LCDMap[(yPos * LCDStride) + xPos] = color;
+			LCDMap[(yPos * LCDStride) + xPos] = color.ABGRVal;
 		}
 
 		/// <summary>
@@ -1057,9 +1072,9 @@ namespace GBEmu.Emulator
 		/// <param name="x">The X position of the pixel.</param>
 		/// <param name="y">THe Y position of the pixel.</param>
 		/// <returns>The pixel at the location.</returns>
-		private XnaColor GetPixel(int x, int y)
+		private ABGRColor GetPixel(int x, int y)
 		{
-			return LCDMap[(x * LCDStride) + y];
+			return new ABGRColor() { ABGRVal = LCDMap[(x * LCDStride) + y] };
 		}
 		#endregion
 
@@ -1110,7 +1125,7 @@ namespace GBEmu.Emulator
 
 		public void BlitScreen()
 		{
-			screen.CopyData(LCDMap);
+			screen.CopyFrameData(LCDMap);
 		}
 	}
 }

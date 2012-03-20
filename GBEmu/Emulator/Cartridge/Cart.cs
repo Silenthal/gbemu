@@ -116,6 +116,7 @@ namespace GBEmu.Emulator.Cartridge
 
 	public abstract class Cart
 	{
+		protected static int RamOffset = 0x149;
 		protected byte[] romFile;
 
 		public bool FileLoaded { get; protected set; }
@@ -147,7 +148,7 @@ namespace GBEmu.Emulator.Cartridge
 			CartRamBank = 0;
 			if (RamPresent)
 			{
-				switch (romFile[0x149])
+				switch (romFile[RamOffset])
 				{
 					case 0x01:
 						CartRam = new byte[1, 0x800];//A000-A7FF, 2 kilobytes

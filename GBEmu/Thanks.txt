@@ -1,6 +1,6 @@
-﻿Thanks to StackOverflow for giving me an idea on how to draw fast to the
-screen.
+﻿Thanks to a posting on StackOverflow for giving me an idea on how to draw fast to the
+screen (the removed GDIWindow).
 
-Thanks to Martin Korth, whose docs proved to be invaluable.
+Thanks to Martin Korth(pandocs), whose docs proved to be invaluable.
 
-Thanks to the maker of gambatte for his program's implementation of MBC2.
+Thanks to Sindre Aamås(gambatte) for gambatte's implementation of MBC2, HALT, DAA, and interrupts. 

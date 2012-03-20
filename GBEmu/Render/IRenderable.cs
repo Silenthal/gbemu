@@ -2,7 +2,7 @@
 {
 	interface IRenderable
 	{
-		void CopyData(Microsoft.Xna.Framework.Color[] newData);
-		void RenderFrame();
+		void CopyFrameData(uint[] newData);
+		void BlitScreen();
 	}
 }

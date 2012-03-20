@@ -33,9 +33,6 @@
 			this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
-			this.button1 = new System.Windows.Forms.Button();
-			this.label1 = new System.Windows.Forms.Label();
-			this.richTextBox1 = new System.Windows.Forms.RichTextBox();
 			this.xnaRenderWindow1 = new GBEmu.Render.XNA.XNARenderWindow();
 			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
@@ -46,7 +43,7 @@
             this.fileToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip1.Name = "menuStrip1";
-			this.menuStrip1.Size = new System.Drawing.Size(383, 24);
+			this.menuStrip1.Size = new System.Drawing.Size(160, 24);
 			this.menuStrip1.TabIndex = 0;
 			this.menuStrip1.Text = "menuStrip1";
 			// 
@@ -79,60 +76,31 @@
 			// 
 			this.openFileDialog1.Filter = "GB Files|*.gb|GBC Files|*.gbc|All Files|*";
 			// 
-			// button1
-			// 
-			this.button1.Location = new System.Drawing.Point(12, 177);
-			this.button1.Name = "button1";
-			this.button1.Size = new System.Drawing.Size(75, 23);
-			this.button1.TabIndex = 24;
-			this.button1.Text = "Run";
-			this.button1.UseVisualStyleBackColor = true;
-			this.button1.Click += new System.EventHandler(this.button1_Click);
-			// 
-			// label1
-			// 
-			this.label1.AutoSize = true;
-			this.label1.Location = new System.Drawing.Point(178, 27);
-			this.label1.Name = "label1";
-			this.label1.Size = new System.Drawing.Size(65, 13);
-			this.label1.TabIndex = 27;
-			this.label1.Text = "Diagnostics:";
-			// 
-			// richTextBox1
-			// 
-			this.richTextBox1.Location = new System.Drawing.Point(181, 43);
-			this.richTextBox1.Name = "richTextBox1";
-			this.richTextBox1.ReadOnly = true;
-			this.richTextBox1.Size = new System.Drawing.Size(188, 140);
-			this.richTextBox1.TabIndex = 29;
-			this.richTextBox1.Text = "";
-			// 
 			// xnaRenderWindow1
 			// 
-			this.xnaRenderWindow1.Location = new System.Drawing.Point(12, 27);
+			this.xnaRenderWindow1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.xnaRenderWindow1.Location = new System.Drawing.Point(0, 24);
 			this.xnaRenderWindow1.Name = "xnaRenderWindow1";
 			this.xnaRenderWindow1.Size = new System.Drawing.Size(160, 144);
-			this.xnaRenderWindow1.TabIndex = 42;
+			this.xnaRenderWindow1.TabIndex = 0;
 			this.xnaRenderWindow1.Text = "xnaRenderWindow1";
 			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(383, 215);
+			this.AutoSize = true;
+			this.ClientSize = new System.Drawing.Size(160, 168);
 			this.Controls.Add(this.xnaRenderWindow1);
-			this.Controls.Add(this.richTextBox1);
-			this.Controls.Add(this.label1);
 			this.Controls.Add(this.menuStrip1);
-			this.Controls.Add(this.button1);
 			this.DoubleBuffered = true;
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.KeyPreview = true;
 			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "MainForm";
 			this.Text = "GBEmu";
-			this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyDown);
-			this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.MainForm_KeyPress);
-			this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyUp);
+			this.Activated += new System.EventHandler(this.MainForm_Activated);
+			this.Deactivate += new System.EventHandler(this.MainForm_Deactivate);
 			this.menuStrip1.ResumeLayout(false);
 			this.menuStrip1.PerformLayout();
 			this.ResumeLayout(false);
@@ -145,11 +113,8 @@
         private System.Windows.Forms.MenuStrip menuStrip1;
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
-        private System.Windows.Forms.OpenFileDialog openFileDialog1;
-		private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
-        private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.RichTextBox richTextBox1;
+		private System.Windows.Forms.OpenFileDialog openFileDialog1;
+		private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
 		private Render.XNA.XNARenderWindow xnaRenderWindow1;
     }
 }

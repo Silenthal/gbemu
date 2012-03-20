@@ -102,6 +102,7 @@
 			// 
 			this.richTextBox1.Location = new System.Drawing.Point(181, 43);
 			this.richTextBox1.Name = "richTextBox1";
+			this.richTextBox1.ReadOnly = true;
 			this.richTextBox1.Size = new System.Drawing.Size(188, 140);
 			this.richTextBox1.TabIndex = 29;
 			this.richTextBox1.Text = "";
@@ -124,11 +125,13 @@
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.menuStrip1);
 			this.Controls.Add(this.button1);
+			this.DoubleBuffered = true;
 			this.KeyPreview = true;
 			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "MainForm";
 			this.Text = "GBEmu";
 			this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyDown);
+			this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.MainForm_KeyPress);
 			this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyUp);
 			this.menuStrip1.ResumeLayout(false);
 			this.menuStrip1.PerformLayout();

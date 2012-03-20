@@ -6,6 +6,7 @@ using GBEmu.Render;
 namespace GBEmu.Emulator
 {
 	public enum GBSystemState { Stopped, Running, Paused }
+
 	class GBSystem
 	{
 		static TimeSpan frame = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / (long)59.7275005);

@@ -11,5 +11,6 @@ Down = Down Arrow
 Left = Left Arrow
 Right = Right Arrow
 Pause/Resume = P
+Speed Toggle = F (single -> double -> screen refresh speed -> half-> single)
 
 Controls are currently hardcoded in Win32InputHandler.

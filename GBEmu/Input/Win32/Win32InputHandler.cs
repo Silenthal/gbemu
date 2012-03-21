@@ -15,6 +15,7 @@ namespace GBEmu.Input.Win32
 		public Keys Button_Right;
 		public Keys Button_Reset;
 		public Keys Button_Pause;
+		public Keys Button_ToggleFrameLimit;
 	}
 
 	class Win32InputHandler : IInputHandler
@@ -33,6 +34,7 @@ namespace GBEmu.Input.Win32
 			keySettings.Button_Left = Keys.Left;
 			keySettings.Button_Right = Keys.Right;
 			keySettings.Button_Pause = Keys.P;
+			keySettings.Button_ToggleFrameLimit = Keys.F;
 		}
 
 		public void PollInput(GBSystem system)
@@ -49,6 +51,10 @@ namespace GBEmu.Input.Win32
 			{
 				if (system.state == GBSystemState.Running) system.Pause();
 				else if (system.state == GBSystemState.Paused) system.Resume();
+			}
+			if (IsKeyToggled(keySettings.Button_ToggleFrameLimit))
+			{
+				system.ToggleFrameSpeed();
 			}
 		}
 

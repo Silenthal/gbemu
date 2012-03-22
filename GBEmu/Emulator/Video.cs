@@ -730,11 +730,10 @@ namespace GBEmu.Emulator
 							if (lcdChanged)
 							{
 								bool lyc = LYCoincidence;
-								ResetLCD();
 								LCDMode = 00;
 								if ((data & 0x80) != 0)//If LCD was turned on
 								{
-									LYCoincidence = false;
+									ResetLCD();
 									ChangeLCDMode(2);
 								}
 								else
@@ -1144,9 +1143,9 @@ namespace GBEmu.Emulator
 
 		public override void UpdateCounter(int cycles)
 		{
-			lyCounter.UpdateCounter(cycles);
 			if (LCDEnabled)
 			{
+				lyCounter.UpdateCounter(cycles);
 				CycleCounter += cycles;
 				#region Changing modes (need to add special case for drawing scanline 0)
 				//Modes go 2 -> 3 -> 0 -> 2 ->...0 -> 1 -> ... -> 1 -> 2

@@ -12,17 +12,18 @@
 		{
 			if (RamPresent)
 			{
-				CartRam = new byte[1, 0x200];//A000-A1FF, lower nibble only
+				MaxRamBank = 1;
+				CartRam = new byte[0x200];//A000-A1FF, lower nibble only
 			}
 			else
 			{
-				CartRam = new byte[0, 0];
 				features ^= CartFeatures.RAM;
 			}
 		}
 
 		protected override void MBCWrite(int position, byte value)
 		{
+			position &= 0xFFFF;
 			#region 0000-1FFF
 			if (position < 0x2000)
 			{

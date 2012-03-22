@@ -124,12 +124,14 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected override void CartRamWrite(int position, byte value)
 		{
-			if (!RamEnabled) return;
-			if (TimerPresent && RTCActive)
+			if (RamEnabled)
 			{
-				RTC[RTCRegister] = value;
+				if (TimerPresent && RTCActive)
+				{
+					RTC[RTCRegister] = value;
+				}
+				else base.CartRamWrite(position, value);
 			}
-			else base.CartRamWrite(position, value);
 		}
 	}
 }

@@ -1,5 +1,23 @@
 ﻿namespace GBEmu.Emulator
 {
+	/// <summary>
+	/// Reads a byte from the MMU.
+	/// </summary>
+	/// <param name="address">The address to read from.</param>
+	/// <returns>The contents of the memory location.</returns>
+	public delegate byte ReadFromMMUDelegate(int address);
+	/// <summary>
+	/// Writes a byte to the MMU.
+	/// </summary>
+	/// <param name="address">The address to write to.</param>
+	/// <param name="data">The data to write.</param>
+	public delegate void WriteToMMUDelegate(int address, byte data);
+	/// <summary>
+	/// Updates the system time to reflect the cycles passed.
+	/// </summary>
+	/// <param name="cycles">The amount of time that has passed.</param>
+	public delegate void UpdateTimeDelegate(int cycles);
+
 	public interface IReadWriteCapable
 	{
 		/// <summary>

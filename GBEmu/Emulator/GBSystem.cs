@@ -25,6 +25,8 @@ namespace GBEmu.Emulator
 		private int frameLimitIndex;
 
 		private CPU cpu;
+		private MMU mmu;
+		InterruptManager interruptManager;
 		private Input input;
 		private IRenderable screen;
 		private IInputHandler handler;
@@ -47,8 +49,10 @@ namespace GBEmu.Emulator
 
 		public void LoadFile(byte[] loadFile)
 		{
-			cpu = new CPU(loadFile, screen);
-			input = cpu.mmu.input;
+			interruptManager = new InterruptManager();
+			mmu = new MMU(loadFile, interruptManager, screen);
+			cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateCounter);
+			input = mmu.input;
 		}
 
 		public void StartSystem()
@@ -62,7 +66,7 @@ namespace GBEmu.Emulator
 				}
 				if (state == GBSystemState.Paused) continue;
 				watch.Start();
-				cpu.RunFor(70224 - cpu.mmu.LCD.ExecutedFrameCycles);
+				cpu.RunFor(70224 - mmu.LCD.ExecutedFrameCycles);
 				screen.BlitScreen();
 				while (watch.ElapsedTime() < SpeedLimits[frameLimitIndex]) { }
 			}

@@ -25,6 +25,12 @@ namespace GBEmu.Emulator
 
 		private InterruptManager interruptManager;
 		
+		private ReadFromMMUDelegate ReadGB;
+		
+		private WriteToMMUDelegate WriteGB;
+
+		private UpdateTimeDelegate UpdateTimeGB;
+
 		/// <summary>
 		/// A flag that indicates, in DMG mode, whether the HALT bug has taken place and the next instruction should be skipped.
 		/// </summary>
@@ -141,14 +147,14 @@ namespace GBEmu.Emulator
 		public Register SP;
 		#endregion
 		
-		public MMU mmu;
-
 		private int CyclesSinceLastUpdate;
 
-		public CPU(byte[] inFile, GBEmu.Render.IRenderable screen)
+		public CPU(InterruptManager iM, ReadFromMMUDelegate mmuRead, WriteToMMUDelegate mmuWrite, UpdateTimeDelegate sysTimeUpdate)
 		{
-			interruptManager = new InterruptManager();
-			mmu = new MMU(inFile, interruptManager, screen);
+			interruptManager = iM;
+			ReadGB = mmuRead;
+			WriteGB = mmuWrite;
+			UpdateTimeGB = sysTimeUpdate;
 			InitializeDefaultValues();
 		}
 
@@ -1848,7 +1854,7 @@ namespace GBEmu.Emulator
 		/// <param name="cyclesTaken">The amount of cycles passed since the last update.</param>
 		private void UpdateSystemTime(int cyclesTaken)
 		{
-			mmu.UpdateCounter(cyclesTaken);
+			UpdateTimeGB(cyclesTaken);
 			CyclesSinceLastUpdate += cyclesTaken;
 		}
 		#endregion
@@ -1861,7 +1867,7 @@ namespace GBEmu.Emulator
 		/// <returns>The byte at the address.</returns>
 		private byte ReadMMU(ushort address)
 		{
-			byte x = mmu.Read(address);
+			byte x = ReadGB(address);
 			UpdateSystemTime(4);
 			return x;
 		}
@@ -1872,7 +1878,7 @@ namespace GBEmu.Emulator
 		/// <param name="data">The byte to write.</param>
 		private void WriteMMU(ushort address, byte data)
 		{
-			mmu.Write(address, data);
+			WriteGB(address, data);
 			UpdateSystemTime(4);
 		}
 		/// <summary>

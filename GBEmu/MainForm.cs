@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using GBEmu.Emulator;
+using GBEmu.EmuTiming.Win32;
+using GBEmu.Input.Win32;
 
 namespace GBEmu
 {
@@ -16,7 +18,7 @@ namespace GBEmu
 		public MainForm()
 		{
 			InitializeComponent();
-			gbs = new GBSystem(xnaRenderWindow1);
+			gbs = new GBSystem(xnaRenderWindow1, new Win32InputHandler(), new HighResTimer());
 		}
 
 		protected override void OnFormClosing(FormClosingEventArgs e)

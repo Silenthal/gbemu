@@ -2,31 +2,48 @@
 
 namespace GBEmu.Emulator
 {
+	public delegate void DMATransferDelegate(int address, byte data);
 	class MMU : TimedIODevice
 	{
 		#region System Components
-		public Input input;
-		private GBTimer timer;
-		private Cart cart;
-		public Video LCD;
-		private Serial serial;
-		private Audio audio;
 		private InterruptManager interruptManager;
+		private TimedIODevice LCD;
+		private TimedIODevice serial;
+		private TimedIODevice timer;
+		private IReadWriteCapable cart;
+		private IReadWriteCapable input;
+		private IReadWriteCapable audio;
 		#endregion
 
-		private byte[] internalWRAM;//C000-DFFF
+		DMATransferDelegate DMATransfer;
 
-		private byte[] HRAM; //FF80 - FFFE
-		
-		public MMU(byte[] inFile, InterruptManager iM, GBEmu.Render.IRenderable screen)
+		/// <summary>
+		/// [C000-DFFF] Represents the Work RAM contained in the system.
+		/// </summary>
+		private byte[] internalWRAM;
+
+		/// <summary>
+		/// [FF80-FFFE] Represents the High RAM contained in the system.
+		/// </summary>
+		private byte[] HRAM;
+
+		public MMU(InterruptManager iM,
+			IReadWriteCapable iCart,
+			IReadWriteCapable iInput,
+			IReadWriteCapable iAudio,
+			TimedIODevice iTimer,
+			TimedIODevice iSerial,
+			TimedIODevice iVideo,
+			DMATransferDelegate dmaHook)
 		{
 			interruptManager = iM;
-			cart = CartLoader.LoadCart(inFile);
-			input = new Input(iM);
-			timer = new GBTimer(iM);
-			LCD = new Video(interruptManager, screen);
-			serial = new Serial();
-			audio = new Audio();
+			cart = iCart;
+			input = iInput;
+			timer = iTimer;
+			LCD = iVideo;
+			serial = iSerial;
+			audio = iAudio;
+			DMATransfer = dmaHook;
 			InitializeInternalAndHRAM();
 		}
 
@@ -263,10 +280,11 @@ namespace GBEmu.Emulator
 
 		public void DMATransferOAM(byte transferDetails)
 		{
-			int startAddress = transferDetails << 8;
-			for (int i = 0; i < 0xA0; i++)
+			ushort startAddress = (ushort)(transferDetails << 8);
+			ushort endAddress = 0xFE00;
+			while (endAddress < 0xFEA0)
 			{
-				LCD.OAMDMAWrite(0xFE00 + i, Read(startAddress + i));
+				DMATransfer(endAddress++, Read(startAddress++));
 			}
 		}
 

@@ -123,7 +123,7 @@ namespace GBEmu.Emulator.Cartridge
 		}
 	}
 
-	public abstract class Cart
+	public abstract class Cart : IReadWriteCapable
 	{
 		protected byte[] romFile;
 		protected int MaxRamBank;

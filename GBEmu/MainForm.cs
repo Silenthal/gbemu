@@ -11,7 +11,6 @@ namespace GBEmu
 	public partial class MainForm : Form
 	{
 		GBSystem gbs;
-		bool fileLoaded = false;
 		Thread gbSysThread;
 		ThreadStart sysStart;
 
@@ -67,7 +66,6 @@ namespace GBEmu
 					gbSysThread.Abort();
 				}
 				gbs.LoadFile(File.ReadAllBytes(openFileDialog1.FileName));
-				fileLoaded = true;
 				StartSystem();
 			}
 		}

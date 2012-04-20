@@ -67,7 +67,7 @@ namespace GBEmu.Emulator
 			video = new Video(interruptManager, screen);
 			cart = CartLoader.LoadCart(loadFile);
 			input = new Input(interruptManager);
-			mmu = new MMU(cart, input, interruptManager, screen, timer, serial, audio, video, video.OAMDMAWrite);
+			mmu = new MMU(interruptManager, cart, input, audio, timer, serial, video, video.OAMDMAWrite);
 			cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateCounter);
 		}
 

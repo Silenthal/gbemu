@@ -101,7 +101,7 @@ namespace GBEmu.Emulator.Cartridge
 				if (value < 8)
 				{
 					CartRamBank = (byte)(value & 0x03);
-					RTCActive = false;
+					if (TimerPresent) RTCActive = false;
 				}
 				if (TimerPresent && value >= 8 && value < 0xD)
 				{
@@ -113,11 +113,14 @@ namespace GBEmu.Emulator.Cartridge
 			#region 6000-7FFF
 			else if (position < 0x8000)
 			{
-				if (LastLatchWrite == 0 && value == 1)
+				if (TimerPresent)
 				{
-					LatchTime();
+					if (LastLatchWrite == 0 && value == 1)
+					{
+						LatchTime();
+					}
+					LastLatchWrite = value;
 				}
-				LastLatchWrite = value;
 			}
 			#endregion
 		}

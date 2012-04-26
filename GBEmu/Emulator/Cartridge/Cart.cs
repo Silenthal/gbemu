@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace GBEmu.Emulator.Cartridge
 {
+	/// <summary>
+	/// Represents a type of cartridge, specified in the cartridge header.
+	/// </summary>
 	public enum CartridgeType : byte
 	{
 		ROM			= 0x00,
@@ -43,16 +46,23 @@ namespace GBEmu.Emulator.Cartridge
 		//HuC3		= 0xFE,
 		//HuC1_RB		= 0xFF
 	}
+
+	/// <summary>
+	/// Represents features present in the cart.
+	/// </summary>
 	[Flags]
 	public enum CartFeatures : byte
 	{
 		None = 0x0,
 		RAM = 0x1,
-		Battery = 0x2,
+		BatteryBacked = 0x2,
 		Timer = 0x4,
 		Rumble = 0x8,
 	}
 
+	/// <summary>
+	/// A factory class for creating Cartridges.
+	/// </summary>
 	public class CartLoader
 	{
 		#region List of cart features
@@ -60,25 +70,30 @@ namespace GBEmu.Emulator.Cartridge
 		{
 			{CartridgeType.MBC1, CartFeatures.None}, 
 			{CartridgeType.MBC1_R, CartFeatures.RAM}, 
-			{CartridgeType.MBC1_RB, CartFeatures.RAM | CartFeatures.Battery}, 
+			{CartridgeType.MBC1_RB, CartFeatures.RAM | CartFeatures.BatteryBacked}, 
 			{CartridgeType.MBC2, CartFeatures.None}, 
-			{CartridgeType.MBC2_B, CartFeatures.Battery},
+			{CartridgeType.MBC2_B, CartFeatures.BatteryBacked},
 			{CartridgeType.MBC3, CartFeatures.None}, 
 			{CartridgeType.MBC3_R, CartFeatures.RAM}, 
-			{CartridgeType.MBC3_RB, CartFeatures.RAM | CartFeatures.Battery}, 
-			{CartridgeType.MBC3_TB, CartFeatures.Timer | CartFeatures.Battery}, 
-			{CartridgeType.MBC3_TRB, CartFeatures.Timer | CartFeatures.RAM | CartFeatures.Battery}, 
+			{CartridgeType.MBC3_RB, CartFeatures.RAM | CartFeatures.BatteryBacked}, 
+			{CartridgeType.MBC3_TB, CartFeatures.Timer | CartFeatures.BatteryBacked}, 
+			{CartridgeType.MBC3_TRB, CartFeatures.Timer | CartFeatures.RAM | CartFeatures.BatteryBacked}, 
 			{CartridgeType.MBC5, CartFeatures.None}, 
 			{CartridgeType.MBC5_M, CartFeatures.Rumble}, 
 			{CartridgeType.MBC5_MR, CartFeatures.Rumble | CartFeatures.RAM}, 
-			{CartridgeType.MBC5_MRB, CartFeatures.Rumble | CartFeatures.RAM | CartFeatures.Battery}, 
+			{CartridgeType.MBC5_MRB, CartFeatures.Rumble | CartFeatures.RAM | CartFeatures.BatteryBacked}, 
 			{CartridgeType.MBC5_R, CartFeatures.RAM}, 
-			{CartridgeType.MBC5_RB, CartFeatures.RAM | CartFeatures.Battery}, 
+			{CartridgeType.MBC5_RB, CartFeatures.RAM | CartFeatures.BatteryBacked}, 
 			{CartridgeType.ROM, CartFeatures.None}, 
 			{CartridgeType.ROM_R, CartFeatures.RAM}, 
-			{CartridgeType.ROM_RB, CartFeatures.RAM | CartFeatures.Battery}
+			{CartridgeType.ROM_RB, CartFeatures.RAM | CartFeatures.BatteryBacked}
 		};
 		#endregion
+		/// <summary>
+		/// Returns the proper Cart object, based on the file loaded.
+		/// </summary>
+		/// <param name="romFile">The binary file to load.</param>
+		/// <returns>A Cart with the characteristics of the cartridge the file specifies.</returns>
 		public static Cart LoadCart(byte[] romFile)
 		{
 			CartridgeType cs = (CartridgeType)romFile[0x147];
@@ -128,15 +143,13 @@ namespace GBEmu.Emulator.Cartridge
 		protected byte[] romFile;
 		protected int MaxRamBank;
 
-
-		public bool FileLoaded { get; protected set; }
 		protected bool RamEnabled = false;
 		protected int RomBank;
 
-		public CartFeatures features;
+		protected CartFeatures features;
 
 		protected bool RamPresent { get { return (features & CartFeatures.RAM) == CartFeatures.RAM; } }
-		protected bool BatteryPresent { get { return (features & CartFeatures.Battery) == CartFeatures.Battery; } }
+		protected bool BatteryPresent { get { return (features & CartFeatures.BatteryBacked) == CartFeatures.BatteryBacked; } }
 		protected bool RumblePresent { get { return (features & CartFeatures.Rumble) == CartFeatures.Rumble; } }
 		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
 
@@ -149,7 +162,6 @@ namespace GBEmu.Emulator.Cartridge
 			romFile = new byte[inFile.Length];
 			Array.Copy(inFile, romFile, inFile.Length);
 			InitializeOutsideRAM();
-			FileLoaded = true;
 			RomBank = 1;
 		}
 
@@ -190,7 +202,7 @@ namespace GBEmu.Emulator.Cartridge
 			if (position < 0x4000) return romFile[position];
 			else if (position < 0x8000)
 			{
-				return romFile[(RomBank * 0x4000) + position - 0x4000];
+				return romFile[(RomBank * 0x4000) + (position - 0x4000)];
 			}
 			else if (position >= 0xA000 && position < 0xC000)
 			{
@@ -212,7 +224,7 @@ namespace GBEmu.Emulator.Cartridge
 					{
 						return 0xFF;
 					}
-					return CartRam[(CartRamBank * 0x2000) + position - 0xA000];
+					return CartRam[(CartRamBank * 0x2000) + (position - 0xA000)];
 				}
 				else
 				{
@@ -236,6 +248,10 @@ namespace GBEmu.Emulator.Cartridge
 			{
 				CartRamWrite(position, value);
 			}
+			else
+			{
+				position = position;
+			}
 		}
 
 		protected abstract void MBCWrite(int position, byte value);
@@ -250,7 +266,7 @@ namespace GBEmu.Emulator.Cartridge
 					{
 						return;
 					}
-					CartRam[(CartRamBank * 0x2000) + position - 0xA000] = value;
+					CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
 				}
 			}
 		}

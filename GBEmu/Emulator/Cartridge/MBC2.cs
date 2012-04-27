@@ -10,15 +10,8 @@
 
 		protected override void InitializeOutsideRAM()
 		{
-			if (RamPresent)
-			{
-				MaxRamBank = 1;
-				CartRam = new byte[0x200];//A000-A1FF, lower nibble only
-			}
-			else
-			{
-				base.InitializeOutsideRAM();
-			}
+			MaxRamBank = 1;
+			CartRam = new byte[0x200];//A000-A1FF, lower nibble only
 		}
 
 		protected override void MBCWrite(int position, byte value)

@@ -148,7 +148,6 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected CartFeatures features;
 
-		protected bool RamPresent { get { return (features & CartFeatures.RAM) == CartFeatures.RAM; } }
 		protected bool BatteryPresent { get { return (features & CartFeatures.BatteryBacked) == CartFeatures.BatteryBacked; } }
 		protected bool RumblePresent { get { return (features & CartFeatures.Rumble) == CartFeatures.Rumble; } }
 		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
@@ -208,20 +207,13 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected virtual byte CartRamRead(int position)
 		{
-			if (RamPresent)
+			if (RamEnabled)
 			{
-				if (RamEnabled)
-				{
-					if ((position - 0xA000) >= CartRam.Length)
-					{
-						return 0xFF;
-					}
-					return CartRam[(CartRamBank * 0x2000) + (position - 0xA000)];
-				}
-				else
+				if ((position - 0xA000) >= CartRam.Length)
 				{
 					return 0xFF;
 				}
+				return CartRam[(CartRamBank * 0x2000) + (position - 0xA000)];
 			}
 			else
 			{
@@ -240,26 +232,19 @@ namespace GBEmu.Emulator.Cartridge
 			{
 				CartRamWrite(position, value);
 			}
-			else
-			{
-				position = position;
-			}
 		}
 
 		protected abstract void MBCWrite(int position, byte value);
 
 		protected virtual void CartRamWrite(int position, byte value)
 		{
-			if (RamPresent)
+			if (RamEnabled)
 			{
-				if (RamEnabled)
+				if ((position - 0xA000) >= CartRam.Length)
 				{
-					if ((position - 0xA000) >= CartRam.Length)
-					{
-						return;
-					}
-					CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
+					return;
 				}
+				CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
 			}
 		}
 	}

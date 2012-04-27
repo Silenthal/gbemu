@@ -17,7 +17,7 @@
 			}
 			else
 			{
-				features ^= CartFeatures.RAM;
+				base.InitializeOutsideRAM();
 			}
 		}
 

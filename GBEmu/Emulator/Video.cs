@@ -3,6 +3,9 @@ using GBEmu.Render;
 
 namespace GBEmu.Emulator
 {
+	/// <summary>
+	/// Represents a color in ARGB format.
+	/// </summary>
 	[StructLayout(LayoutKind.Explicit)]
 	public struct ABGRColor
 	{
@@ -149,30 +152,27 @@ namespace GBEmu.Emulator
 		}
 	}
 
+	/// <summary>
+	/// A manager for the LY counter for the display.
+	/// </summary>
 	public class LYCounter : TimedIODevice
 	{
-		//When the LCD is turned on, reset LY.
-		private static int LineCycles = 456;
+		public static int LineCycles = 456;
 		public byte LY { get; private set; }
-		public byte LYC { get; set; }
-		public int TimeToNextLine
+		public int TimeOnCurrentLine
 		{
 			get
 			{
-				return 456 - CycleCounter;
+				return CycleCounter;
 			}
 		}
-		public int TimeToNextFrame
-		{
-			get
-			{
-				return 70224 - (LY * 456) + CycleCounter;
-			}
-		}
+		private bool IsInMode2 = false;
 
 		public delegate void OnLineChangedEventHandler();
+		public delegate void OnMode3EventHandler();
 
 		public event OnLineChangedEventHandler LineChanged;
+		public event OnMode3EventHandler OnMode3;
 
 		protected virtual void OnLineChanged()
 		{
@@ -180,9 +180,20 @@ namespace GBEmu.Emulator
 				LineChanged();
 		}
 
+		protected virtual void OnMode3Reached()
+		{
+			if (OnMode3 != null)
+				OnMode3();
+		}
+
 		public override void UpdateCounter(int cycles)
 		{
 			CycleCounter += cycles;
+			if (IsInMode2 && LY < 144 && CycleCounter >= 80)
+			{
+				IsInMode2 = false;
+				OnMode3();
+			}
 			if (CycleCounter >= LineCycles)
 			{
 				CycleCounter -= LineCycles;
@@ -198,6 +209,7 @@ namespace GBEmu.Emulator
 				LY = 0;
 			}
 			OnLineChanged();
+			IsInMode2 = true;
 		}
 
 		public void ResetLY()
@@ -205,6 +217,7 @@ namespace GBEmu.Emulator
 			LY = 0;
 			CycleCounter = 0;
 			OnLineChanged();
+			IsInMode2 = true;
 		}
 
 		public override byte Read(int position)
@@ -243,14 +256,14 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return ((LCDMode & 0x2) == 0) || !LCDEnabled;
+				return ((GetMode() & 0x2) == 0) || !LCDEnabled;
 			}
 		}
 		private bool VRAMAccessAllowed
 		{
 			get
 			{
-				return (LCDMode != 3) || !LCDEnabled;
+				return (GetMode() != 3) || !LCDEnabled;
 			}
 		}
 		#endregion
@@ -370,6 +383,7 @@ namespace GBEmu.Emulator
 			}
 		}
 		#endregion
+		private byte stat;
 		/// <summary>
 		/// [FF41]Controls the interrupts associated with the LCD, as well as indicates the status of the LCD drawing.
 		/// </summary>
@@ -385,7 +399,17 @@ namespace GBEmu.Emulator
 		///		-10: Mode 2: Reading from OAM		VRAM accessible, OAM inaccessible.
 		///		-11: Mode 3: Reading from OAM/VRAM	VRAM/OAM inaccessible.
 		/// </remarks>
-		private byte LCDStatus;
+		private byte LCDStatus
+		{
+			get
+			{
+				return (byte)(stat | GetMode());
+			}
+			set
+			{
+				stat = (byte)(value & 0x78);
+			}
+		}
 		#region LCD Status 
 		/// <summary>
 		/// Indicates whether the LY=LYC coincidence interrupt is used.
@@ -394,12 +418,12 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & 0x40) != 0;
+				return (stat & 0x40) != 0;
 			}
 			set
 			{
-				if (value) LCDStatus |= 0x40;
-				else LCDStatus &= 0xBF;
+				if (value) stat |= 0x40;
+				else stat &= 0xBF;
 			}
 		}//Bit 6
 		/// <summary>
@@ -409,12 +433,12 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & 0x20) != 0;
+				return (stat & 0x20) != 0;
 			}
 			set
 			{
-				if (value) LCDStatus |= 0x20;
-				else LCDStatus &= 0xDF;
+				if (value) stat |= 0x20;
+				else stat &= 0xDF;
 			}
 		}//Bit 5
 		/// <summary>
@@ -424,12 +448,12 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & 0x10) != 0;
+				return (stat & 0x10) != 0;
 			}
 			set
 			{
-				if (value) LCDStatus |= 0x10;
-				else LCDStatus &= 0xEF;
+				if (value) stat |= 0x10;
+				else stat &= 0xEF;
 			}
 		}//Bit 4
 		/// <summary>
@@ -439,12 +463,12 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & 0x08) != 0;
+				return (stat & 0x08) != 0;
 			}
 			set
 			{
-				if (value) LCDStatus |= 0x08;
-				else LCDStatus &= 0xF7;
+				if (value) stat |= 0x08;
+				else stat &= 0xF7;
 			}
 		}//Bit 3
 		/// <summary>
@@ -454,29 +478,14 @@ namespace GBEmu.Emulator
 		{
 			get
 			{
-				return (LCDStatus & 0x04) != 0;
+				return (stat & 0x04) != 0;
 			}
 			set
 			{
-				if (value) LCDStatus |= 0x04;
-				else LCDStatus &= 0xFB;
+				if (value) stat |= 0x04;
+				else stat &= 0xFB;
 			}
 		}//Bit 2
-		/// <summary>
-		/// Indicates the mode of the LCD.
-		/// </summary>
-		private int LCDMode
-		{
-			get
-			{
-				return LCDStatus & 0x03;
-			}
-			set
-			{
-				LCDStatus &= 0xFC;
-				LCDStatus |= (byte)(value & 0x3);
-			}
-		}//Bit 1-0
 		#endregion
 		#endregion
 
@@ -544,22 +553,30 @@ namespace GBEmu.Emulator
 		#region Cycle Constants
 		private const int Mode1Cycles = 4560;
 		private const int Mode2Cycles = 80;
-		private const int Mode3Cycles = 172;
-		private const int Mode0Cycles = 204;
+		private int Mode0Cycles
+		{
+			get
+			{
+				return 204 - GetSpriteCountOnCurrentScanline();
+			}
+		}
+		private int Mode3Cycles
+		{
+			get
+			{
+				return 172 + GetSpriteCountOnCurrentScanline();
+			}
+		}
 		private const int LYOnScreenCycles = 65664;
 		private const int LCDDrawCycles = 70224;
 		#endregion
 
-		/// <summary>
-		/// Represents the LCD that is being drawn to.
-		/// </summary>
-		private uint[] LCDMap;
-
+		#region Memory Locations
 		/// <summary>
 		/// [8000-9FFF]Video RAM.
 		/// </summary>
 		public byte[] VRAM;
-		
+
 		/// <summary>
 		/// [FE00-FE9F]Object Attribute Memory.
 		/// </summary>
@@ -575,10 +592,17 @@ namespace GBEmu.Emulator
 		/// -Bit 4: Palette Number (DMG)
 		/// </remarks>
 		public byte[] OAM;
+		#endregion
 
+		/// <summary>
+		/// Represents the LCD that is being drawn to.
+		/// </summary>
+		private uint[] LCDMap;
+		
 		public int ExecutedFrameCycles;
 
-		private int TimeToNextModeChange;
+		private bool CheckMode3Time;
+		private int TimeUntilMode0;
 
 		private SpriteInfo[] SpriteInfoTable;
 
@@ -592,12 +616,13 @@ namespace GBEmu.Emulator
 			screen = newScreen;
 			interruptManager = iM;
 			lyCounter = new LYCounter();
-			lyCounter.LineChanged += new LYCounter.OnLineChangedEventHandler(LYCoincidenceCheck);
+			lyCounter.LineChanged += new LYCounter.OnLineChangedEventHandler(OnLYLineChange);
+			lyCounter.OnMode3 += new LYCounter.OnMode3EventHandler(Mode3Handler);
 			ResetLCD();
 			InitializeVideoMemory();
 			InitializePalettes();
 			InitializeLCD();
-			ChangeLCDMode(2);
+			CheckMode3Time = false;
 		}
 
 		#region Initialization
@@ -611,6 +636,7 @@ namespace GBEmu.Emulator
 			BackgroundColorNumOnScanline = new int[LCDWidth];
 			SpritesOnScanline = new SpriteInfo[LCDWidth];
 			LCDControl = 0x91;
+			stat = 0x80;
 			LCDStatus = 0x80;
 			ScrollX = 0x00;
 			ScrollY = 0x00;
@@ -662,7 +688,10 @@ namespace GBEmu.Emulator
 					case IOPorts.LCDC:
 						return LCDControl;
 					case IOPorts.STAT:
-						return LCDStatus;
+						{
+							byte ffs = LCDStatus;
+							return LCDStatus;
+						}
 					case IOPorts.SCX:
 						return ScrollX;
 					case IOPorts.SCY:
@@ -694,7 +723,11 @@ namespace GBEmu.Emulator
 			{
 				return VRAM[position - 0x8000];
 			}
-			else return 0xFF;
+			else
+			{
+				int x = GetMode();
+				return 0xFF;
+			}
 		}
 
 		private byte OAMRead(int position)
@@ -726,26 +759,20 @@ namespace GBEmu.Emulator
 					case IOPorts.LCDC:
 						if (LCDControl != data)
 						{
-							bool lcdChanged = ((LCDControl ^ data) & 0x80) != 0;
-							if (lcdChanged)
+							//True if bit for 'lcdenable' is switched from 0 to 1.
+							bool lcdJustTurnedOn = ((LCDControl ^ data) & 0x80) != 0;
+							if (lcdJustTurnedOn)
 							{
-								bool lyc = LYCoincidence;
-								LCDMode = 00;
 								if ((data & 0x80) != 0)//If LCD was turned on
 								{
 									ResetLCD();
-									ChangeLCDMode(2);
-								}
-								else
-								{
-									LYCoincidence = lyc;
 								}
 							}
 							LCDControl = data;
 						}
 						break;
 					case IOPorts.STAT:
-						LCDStatus |= (byte)(data & 0x78);
+						LCDStatus = data;
 						break;
 					case IOPorts.SCX:
 						ScrollX = data;
@@ -806,20 +833,93 @@ namespace GBEmu.Emulator
 		#endregion
 
 		#region LY/mode management
-		private void LYCoincidenceCheck()
+		private void OnLYLineChange()
 		{
-			if (LCDEnabled && LY == LYCompare)
+			if (LCDEnabled)
 			{
-				LYCoincidence = true;
-				if (LYCoincidenceInterruptEnabled)
+				if (LY < LCDHeight)
 				{
-					if ((!Mode2_OAMInterruptEnabled && LY < LCDHeight) || (!Mode1_VBlankInterruptEnabled && LY >= LCDHeight))
+					ReconstructOAMTable();
+					if (Mode2_OAMInterruptEnabled)
 					{
 						interruptManager.RequestInterrupt(InterruptType.LCDC);
 					}
+					else if (LY == LYCompare)
+					{
+						LYCoincidence = true;
+						if (LYCoincidenceInterruptEnabled)
+						{
+							interruptManager.RequestInterrupt(InterruptType.LCDC);
+						}
+					}
+					else LYCoincidence = false;
+				}
+				else if (LY == LCDHeight)
+				{
+					interruptManager.RequestInterrupt(InterruptType.VBlank);
+					if (Mode1_VBlankInterruptEnabled)
+					{
+						interruptManager.RequestInterrupt(InterruptType.LCDC);
+					}
+					else if (LY == LYCompare)
+					{
+						LYCoincidence = true;
+						if (LYCoincidenceInterruptEnabled)
+						{
+							interruptManager.RequestInterrupt(InterruptType.LCDC);
+						}
+					}
+					else LYCoincidence = false;
+				}
+				else
+				{
+					if (LY == LYCompare)
+					{
+						LYCoincidence = true;
+						if (LYCoincidenceInterruptEnabled)
+						{
+							interruptManager.RequestInterrupt(InterruptType.LCDC);
+						}
+					}
+					else LYCoincidence = false;
 				}
 			}
-			else LYCoincidence = false;
+		}
+
+		private void Mode3Handler()
+		{
+			DrawScanline();
+			int TimeSpentInMode3 = lyCounter.TimeOnCurrentLine - Mode2Cycles;
+			TimeUntilMode0 = Mode3Cycles - TimeSpentInMode3;
+			CheckMode3Time = true;
+		}
+
+		private int GetMode()
+		{
+			if (LCDEnabled)
+			{
+				if (LY >= LCDHeight)
+				{
+					return 1;
+				}
+				int Mode0Time = Mode2Cycles + Mode3Cycles;
+				if (lyCounter.TimeOnCurrentLine < Mode2Cycles)
+				{
+					return 2;
+				}
+				else if (lyCounter.TimeOnCurrentLine < Mode0Time)
+				{
+					return 3;
+				}
+				else
+				{
+					return 0;
+				}
+			}
+			else
+			{
+				return 0;
+			}
 		}
 
 		private void ResetLCD()
@@ -827,51 +927,6 @@ namespace GBEmu.Emulator
 			lyCounter.ResetLY();
 			CycleCounter = 0;
 			ExecutedFrameCycles = 0;
-		}
-
-		/// <summary>
-		/// Changes the mode of the LCD screen.
-		/// </summary>
-		/// <remarks>
-		/// Mode 0: H-Blank. VRAM and OAM are accessible.
-		/// Mode 1: V-Blank (or display disable). VRAM and OAM are accessible.
-		/// Mode 2: OAM is inaccessible. VRAM is accessible.
-		/// Mode 3: OAM and VRAM are inaccessible.
-		/// </remarks>
-		/// <param name="newMode">The mode to change to.</param>
-		private void ChangeLCDMode(int newMode)
-		{
-			LCDMode = newMode;
-			switch (newMode)
-			{
-				case 0://HBlank
-					TimeToNextModeChange = Mode0Cycles - (GetSpriteCountOnCurrentScanline() * 10);
-					if (LCDEnabled && Mode0_HBlankInterruptEnabled)
-					{
-						interruptManager.RequestInterrupt(InterruptType.LCDC);
-					}
-					break;
-				case 1://VBlank
-					TimeToNextModeChange = Mode1Cycles;
-					if (LCDEnabled)
-					{
-						if (Mode1_VBlankInterruptEnabled)
-						{
-							interruptManager.RequestInterrupt(InterruptType.LCDC);
-						}
-						interruptManager.RequestInterrupt(InterruptType.VBlank);
-					}
-					break;
-				case 2://Searching OAM
-					ReconstructOAMTable();
-					TimeToNextModeChange = Mode2Cycles;
-					if (LCDEnabled && Mode2_OAMInterruptEnabled) interruptManager.RequestInterrupt(InterruptType.LCDC);
-					break;
-				case 3://Searching OAM + VRAM
-					DrawScanline();
-					TimeToNextModeChange = Mode3Cycles + (GetSpriteCountOnCurrentScanline() * 10);
-					break;
-			}
 		}
 		#endregion
 
@@ -942,7 +997,7 @@ namespace GBEmu.Emulator
 		{
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				SetPixel(LCD_X, LY, ABGRColor.White);
+				SetPixel(LCD_X, LY, ABGRColor.DMGWhite);
 			}
 		}
 
@@ -953,7 +1008,7 @@ namespace GBEmu.Emulator
 		{
 			for (int LCD_X = 0; LCD_X < LCDWidth; LCD_X++)
 			{
-				SetPixel(LCD_X, LY, ABGRColor.Black);
+				SetPixel(LCD_X, LY, ABGRColor.DMGBlack);
 			}
 		}
 
@@ -1143,40 +1198,20 @@ namespace GBEmu.Emulator
 
 		public override void UpdateCounter(int cycles)
 		{
-			if (LCDEnabled)
+			lyCounter.UpdateCounter(cycles);
+			CycleCounter += cycles;
+			if (CheckMode3Time)
 			{
-				lyCounter.UpdateCounter(cycles);
-				CycleCounter += cycles;
-				#region Changing modes (need to add special case for drawing scanline 0)
-				//Modes go 2 -> 3 -> 0 -> 2 ->...0 -> 1 -> ... -> 1 -> 2
-				//LY increases happen after 0, or after each line of 1.
-				if (CycleCounter >= TimeToNextModeChange)
+				TimeUntilMode0 -= cycles;
+				if (TimeUntilMode0 < 0)
 				{
-					CycleCounter -= TimeToNextModeChange;
-					switch (LCDMode)
+					TimeUntilMode0 = int.MaxValue;
+					CheckMode3Time = false;
+					if (Mode0_HBlankInterruptEnabled)
 					{
-						case 2://Mode 2: Searching OAM...no access to OAM, progresses to 3
-							ChangeLCDMode(3);
-							break;
-						case 3://Mode 3: Searching OAM/VRAM...no access to OAM/VRAM or Palette Data, progresses to 0
-							ChangeLCDMode(0);
-							break;
-						case 0://Mode 0: HBlank...Access allowed, progresses to 1 (if at end of screen draw), or 2.
-							if (LY >= LCDHeight)
-							{
-								ChangeLCDMode(1);
-							}
-							else
-							{
-								ChangeLCDMode(2);
-							}
-							break;
-						case 1://Mode 1: VBlank...access allowed, progresses to 2
-							ChangeLCDMode(2);
-							break;
+						interruptManager.RequestInterrupt(InterruptType.LCDC);
 					}
 				}
-				#endregion
 			}
 			ExecutedFrameCycles += cycles;
 			if (ExecutedFrameCycles >= LCDDrawCycles)

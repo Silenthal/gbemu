@@ -169,31 +169,23 @@ namespace GBEmu.Emulator.Cartridge
 		{
 			CartRamBank = 0;
 			MaxRamBank = 0;
-			if (RamPresent)
+			switch (romFile[0x149])
 			{
-				switch (romFile[0x149])
-				{
-					case 0x01:
-						CartRam = new byte[0x800];//A000-A7FF, 2 kilobytes
-						MaxRamBank = 1;
-						break;
-					case 0x02:
-						CartRam = new byte[0x2000];//A000-BFFF, 8 kilobytes
-						MaxRamBank = 1;
-						break;
-					case 0x03:
-						CartRam = new byte[4 * 0x2000];//A000-BFFF x 4, 32 kilobytes
-						MaxRamBank = 4;
-						break;
-					default:
-						features ^= CartFeatures.RAM;
-						break;
-				}
+				case 0x00://No RAM?
+					MaxRamBank = 2;
+					break;
+				case 0x01://A000-A7FF, 2 kilobytes
+				case 0x02://A000-BFFF, 8 kilobytes
+					MaxRamBank = 1;
+					break;
+				case 0x03://A000-BFFF x 4, 32 kilobytes
+					MaxRamBank = 4;
+					break;
+				default:
+					MaxRamBank = 16;
+					break;
 			}
-			else
-			{
-				features ^= CartFeatures.RAM;
-			}
+			CartRam = new byte[MaxRamBank * 0x2000];
 		}
 
 		public byte Read(int position)

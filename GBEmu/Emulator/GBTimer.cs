@@ -40,7 +40,7 @@
 			}
 		}
 
-		public override void UpdateCounter(int cycles)
+		public override void UpdateTime(int cycles)
 		{
 			CycleCounter += cycles;
 			if (CycleCounter >= DIV_CYCLE)
@@ -162,7 +162,7 @@
 			TAC_TimerCycles = CycleCounter % resolution;
 		}
 
-		public override void UpdateCounter(int cycles)
+		public override void UpdateTime(int cycles)
 		{
 			CycleCounter += cycles;
 			if (CycleCounter >= DMG_ClockRate)
@@ -230,10 +230,10 @@
 			}
 		}
 
-		public override void UpdateCounter(int cycles)
+		public override void UpdateTime(int cycles)
 		{
-			divider.UpdateCounter(cycles);
-			timerCounter.UpdateCounter(cycles);
+			divider.UpdateTime(cycles);
+			timerCounter.UpdateTime(cycles);
 		}
 	}
 }

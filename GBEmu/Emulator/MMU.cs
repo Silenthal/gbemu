@@ -2,7 +2,6 @@
 
 namespace GBEmu.Emulator
 {
-	public delegate void DMATransferDelegate(int address, byte data);
 	class MMU : TimedIODevice
 	{
 		#region System Components
@@ -281,19 +280,19 @@ namespace GBEmu.Emulator
 		public void DMATransferOAM(byte transferDetails)
 		{
 			ushort startAddress = (ushort)(transferDetails << 8);
-			ushort endAddress = 0xFE00;
-			while (endAddress < 0xFEA0)
+			byte endAddress = 0x00;
+			while (endAddress < 0xA0)
 			{
 				DMATransfer(endAddress++, Read(startAddress++));
 			}
 		}
 
-		public override void UpdateCounter(int cycles)
+		public override void UpdateTime(int cycles)
 		{
 			if (cycles <= 0) return;
-			LCD.UpdateCounter(cycles);
-			timer.UpdateCounter(cycles);
-			serial.UpdateCounter(cycles);
+			LCD.UpdateTime(cycles);
+			timer.UpdateTime(cycles);
+			serial.UpdateTime(cycles);
 		}
 	}
 }

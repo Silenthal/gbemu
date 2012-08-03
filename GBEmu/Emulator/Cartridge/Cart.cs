@@ -20,9 +20,9 @@ namespace GBEmu.Emulator.Cartridge
 		ROM_R		= 0x08,
 		ROM_RB		= 0x09,
 		
-		//MMM01		= 0x0B,
-		//MMM01_R		= 0x0C,
-		//MMM01_RB	= 0x0D,
+		// MMM01		= 0x0B,
+		// MMM01_R		= 0x0C,
+		// MMM01_RB	= 0x0D,
 		
 		MBC3_TB		= 0x0F,
 		MBC3_TRB	= 0x10,
@@ -145,6 +145,7 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected bool RamEnabled = false;
 		protected int RomBank;
+		protected int MaxRomBank;
 
 		protected CartFeatures features;
 
@@ -153,13 +154,14 @@ namespace GBEmu.Emulator.Cartridge
 		protected bool TimerPresent { get { return (features & CartFeatures.Timer) == CartFeatures.Timer; } }
 
 		protected byte[] CartRam;
-		protected byte CartRamBank;
+		protected int CartRamBank;
 
 		protected Cart(byte[] inFile, CartFeatures cartFeatures)
 		{
 			features = cartFeatures;
 			romFile = new byte[inFile.Length];
 			Array.Copy(inFile, romFile, inFile.Length);
+			MaxRomBank = romFile.Length >> 14;
 			InitializeOutsideRAM();
 			RomBank = 1;
 		}
@@ -190,10 +192,13 @@ namespace GBEmu.Emulator.Cartridge
 		public byte Read(int position)
 		{
 			position &= 0xFFFF;
-			if (position < 0x4000) return romFile[position];
+			if (position < 0x4000)
+			{
+				return romFile[position];
+			}
 			else if (position < 0x8000)
 			{
-				return romFile[(RomBank * 0x4000) + (position - 0x4000)];
+				return romFile[(RomBank << 14) | (position & 0x3FFF)];
 			}
 			else if (position >= 0xA000 && position < 0xC000)
 			{
@@ -207,13 +212,10 @@ namespace GBEmu.Emulator.Cartridge
 
 		protected virtual byte CartRamRead(int position)
 		{
+			position -= 0xA000;
 			if (RamEnabled)
 			{
-				if ((position - 0xA000) >= CartRam.Length)
-				{
-					return 0xFF;
-				}
-				return CartRam[(CartRamBank * 0x2000) + (position - 0xA000)];
+				return CartRam[(CartRamBank << 13) | position];
 			}
 			else
 			{
@@ -235,7 +237,7 @@ namespace GBEmu.Emulator.Cartridge
 		}
 
 		protected abstract void MBCWrite(int position, byte value);
-
+			
 		protected virtual void CartRamWrite(int position, byte value)
 		{
 			if (RamEnabled)

@@ -17,7 +17,7 @@
             
         }
 
-        public override void UpdateCounter(int cycles)
+        public override void UpdateTime(int cycles)
         {
             
         }

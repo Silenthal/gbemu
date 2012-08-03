@@ -105,9 +105,9 @@ namespace GBEmu.Emulator
 		/// When an interrupt ends the HALT state, the flag isn't cleared afterwards.
 		/// </remarks>
 		/// <returns>The type of interrupt being handled.</returns>
-		public InterruptType FetchNextInterrupt(CPUState currentState)
+		public InterruptType FetchNextInterrupt(CPU.CPUState currentState)
 		{
-			if (!InterruptMasterEnable && currentState != CPUState.Halt) return InterruptType.None;
+			if (!InterruptMasterEnable && currentState != CPU.CPUState.Halt) return InterruptType.None;
 			byte triggered = (byte)(IE & IF);
 			InterruptType returned = InterruptType.None;
 			#region Getting interrupt according to priority
@@ -133,7 +133,7 @@ namespace GBEmu.Emulator
 			}
 			#endregion
 			if (returned == InterruptType.None) return returned;
-			if (currentState != CPUState.Halt)
+			if (currentState != CPU.CPUState.Halt)
 			{
 				IF ^= (byte)returned;
 				DisableInterrupts();

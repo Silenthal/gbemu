@@ -68,7 +68,7 @@ namespace GBEmu.Emulator
 			cart = CartLoader.LoadCart(loadFile);
 			input = new Input(interruptManager);
 			mmu = new MMU(interruptManager, cart, input, audio, timer, serial, video, video.OAMDMAWrite);
-			cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateCounter);
+			cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateTime);
 		}
 
 		public void StartSystem()
@@ -82,7 +82,7 @@ namespace GBEmu.Emulator
 				}
 				if (state == GBSystemState.Paused) continue;
 				watch.Start();
-				cpu.RunFor(70224 - video.ExecutedFrameCycles);
+				cpu.RunFor(video.TimeToNextScreenBlit());
 				screen.BlitScreen();
 				while (watch.ElapsedTime() < SpeedLimits[frameLimitIndex]) { }
 			}

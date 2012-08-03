@@ -10,14 +10,12 @@
 
 		protected override void MBCWrite(int position, byte value)
 		{
-			#region 0000-1FFF
-			if (position < 0x2000)
+			switch (position >> 13)
 			{
-				//xxxx0101 == on
-				//xxxx0000 == off
-				RamEnabled = ((value & 0x0F) == 0x0A);
+				case 0://0x0000 - 0x1FFF
+					RamEnabled = (value & 0xF) == 0xA;
+					break;
 			}
-			#endregion
 		}
 	}
 }

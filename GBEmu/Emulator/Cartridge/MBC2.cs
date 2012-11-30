@@ -1,6 +1,6 @@
 ﻿namespace GBEmu.Emulator.Cartridge
 {
-	class MBC2 : Cart
+	internal class MBC2 : Cart
 	{
 		public MBC2(byte[] romFile, CartFeatures cartFeatures)
 			: base(romFile, cartFeatures)

@@ -1,6 +1,6 @@
 ﻿namespace GBEmu.Emulator.Cartridge
 {
-	class PlainCart : Cart
+	internal class PlainCart : Cart
 	{
 		public PlainCart(byte[] romFile, CartFeatures cartFeatures)
 			: base(romFile, cartFeatures)

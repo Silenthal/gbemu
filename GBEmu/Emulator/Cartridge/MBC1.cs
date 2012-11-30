@@ -1,6 +1,6 @@
 ﻿namespace GBEmu.Emulator.Cartridge
 {
-	class MBC1 : Cart
+	internal class MBC1 : Cart
 	{
 		/// <summary>
 		/// Determines whether RAM bank addressing mode is to be used.

@@ -42,6 +42,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
@@ -50,18 +51,31 @@
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
-    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Emulator\Audio.cs" />
+    <Compile Include="Emulator\IO\FileIO.cs" />
+    <Compile Include="Render\Common.cs" />
+    <Compile Include="Render\Hq2x.cs" />
+    <Compile Include="Render\Hq3x.cs" />
+    <None Include="Render\Hq4x.cs" />
+    <Compile Include="Render\Scaler.cs" />
+    <Compile Include="ScaledImage.cs" />
+    <Compile Include="Emulator\Graphics\BGRAColor.cs" />
+    <Compile Include="Emulator\Audio\GBAudio.cs" />
     <Compile Include="Emulator\Cartridge\Cart.cs" />
     <Compile Include="Emulator\Cartridge\MBC1.cs" />
     <Compile Include="Emulator\Cartridge\MBC2.cs" />
@@ -69,19 +83,34 @@
     <Compile Include="Emulator\Cartridge\MBC5.cs" />
     <Compile Include="Emulator\Cartridge\PlainCart.cs" />
     <Compile Include="Emulator\CPU.cs" />
+    <Compile Include="Emulator\Timing\Divider.cs" />
     <Compile Include="Emulator\GBSystem.cs" />
-    <Compile Include="Emulator\GBTimer.cs" />
-    <Compile Include="Emulator\IOConstants.cs" />
-    <Compile Include="Emulator\Input.cs" />
-    <Compile Include="Emulator\InterruptManager.cs" />
-    <Compile Include="Emulator\IODevice.cs" />
-    <Compile Include="Emulator\Serial.cs" />
-    <Compile Include="Emulator\MMU.cs" />
-    <Compile Include="Emulator\Video.cs" />
-    <Compile Include="EmuTiming\ITimekeeper.cs" />
-    <Compile Include="EmuTiming\Win32\HighResTimer.cs" />
-    <Compile Include="Input\IInputHandler.cs" />
-    <Compile Include="Input\Win32\Win32InputHandler.cs" />
+    <Compile Include="Emulator\Timing\GBTimer.cs" />
+    <Compile Include="Emulator\Timing\GlobalTimer.cs" />
+    <Compile Include="Emulator\IO\IOConstants.cs" />
+    <Compile Include="Emulator\Input\GBInput.cs" />
+    <Compile Include="Emulator\IO\InterruptManager.cs" />
+    <Compile Include="Emulator\IO\IODevice.cs" />
+    <Compile Include="Emulator\IO\IReadWriteCapable.cs" />
+    <Compile Include="Emulator\Debug\Logger.cs" />
+    <Compile Include="Emulator\Debug\LogMessage.cs" />
+    <Compile Include="Emulator\Graphics\LYCounter.cs" />
+    <Compile Include="Emulator\Debug\Profiler.cs" />
+    <Compile Include="Emulator\IO\Serial.cs" />
+    <Compile Include="Emulator\IO\MMU.cs" />
+    <Compile Include="Emulator\Graphics\SpriteInfo.cs" />
+    <Compile Include="Emulator\Timing\TimerCounter.cs" />
+    <Compile Include="Emulator\Graphics\Video.cs" />
+    <Compile Include="Emulator\Timing\ITimekeeper.cs" />
+    <Compile Include="HighResTimer.cs" />
+    <Compile Include="Emulator\Input\IInputHandler.cs" />
+    <Compile Include="Win32InputHandler.cs" />
+    <Compile Include="LogWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LogWindow.Designer.cs">
+      <DependentUpon>LogWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -90,18 +119,24 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Render\XNA\GraphicsDeviceControl.cs">
-      <SubType>Component</SubType>
+    <Compile Include="Emulator\Graphics\IRenderable.cs" />
+    <Compile Include="TilemapWindow.cs">
+      <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Render\XNA\GraphicsDeviceService.cs" />
-    <Compile Include="Render\IRenderable.cs" />
-    <Compile Include="Render\XNA\ServiceContainer.cs" />
-    <Compile Include="Render\XNA\XNARenderWindow.cs">
-      <SubType>Component</SubType>
+    <Compile Include="TilemapWindow.Designer.cs">
+      <DependentUpon>TilemapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="NativeMethods.cs" />
+    <Compile Include="WPFRenderWindow.xaml.cs">
+      <DependentUpon>WPFRenderWindow.xaml</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="LogWindow.resx">
+      <DependentUpon>LogWindow.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TilemapWindow.resx">
+      <DependentUpon>TilemapWindow.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +162,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="WPFRenderWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

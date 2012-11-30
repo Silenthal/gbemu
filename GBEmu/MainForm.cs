@@ -1,89 +1,107 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Windows.Forms;
-using GBEmu.Emulator;
-using GBEmu.EmuTiming.Win32;
-using GBEmu.Input.Win32;
-
-namespace GBEmu
+﻿namespace GBEmu
 {
-	public partial class MainForm : Form
-	{
-		GBSystem gbs;
-		Thread gbSysThread;
-		ThreadStart sysStart;
+    using System;
+    using System.IO;
+    using System.Threading;
+    using System.Windows.Forms;
+    using GBEmu.Emulator;
 
-		public MainForm()
-		{
-			InitializeComponent();
-			gbs = new GBSystem(xnaRenderWindow1, new Win32InputHandler(), new HighResTimer());
-		}
+    public partial class MainForm : Form
+    {
+        private GBSystem gbs;
+        private Thread gbSysThread;
+        private ThreadStart sysStart;
+        private WPFRenderWindow renderWindow;
 
-		protected override void OnFormClosing(FormClosingEventArgs e)
-		{
-			gbs.Stop();
-			if (gbSysThread != null)
-			{
-				gbSysThread.Abort();
-			}
-			base.OnFormClosing(e);
-		}
+        public MainForm()
+        {
+            InitializeComponent();
+            renderWindow = (WPFRenderWindow)elementHost1.Child;
+            renderWindow.InitializeWindow(160, 144);
+            gbs = new GBSystem(renderWindow, new Win32InputHandler(), new HighResTimer());
+        }
 
-		#region System Control
-		private void StartSystem()
-		{
-			if (gbSysThread != null)
-			{
-				gbSysThread.Abort();
-			}
-			sysStart = new ThreadStart(gbs.StartSystem);
-			gbSysThread = new Thread(sysStart);
-			gbSysThread.Start();
-			xnaRenderWindow1.Focus();
-		}
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            gbs.Stop();
+            if (gbSysThread != null)
+            {
+                gbSysThread.Abort();
+            }
+            base.OnFormClosing(e);
+        }
 
-		private void PauseSystem()
-		{
-			gbs.Pause();
-		}
+        #region System Control
 
-		private void ResumeSystem()
-		{
-			gbs.Resume();
-			xnaRenderWindow1.Focus();
-		}
-		#endregion
+        private void StartSystem()
+        {
+            if (gbSysThread != null)
+            {
+                gbSysThread.Abort();
+            }
+            sysStart = new ThreadStart(gbs.StartSystem);
+            gbSysThread = new Thread(sysStart);
+            gbSysThread.Start();
+            elementHost1.Focus();
+        }
 
-		#region Menu Items
-		private void openToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			if (openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-			{
-				gbs.Stop();
-				if (gbSysThread != null)
-				{
-					gbSysThread.Abort();
-				}
-				gbs.LoadFile(File.ReadAllBytes(openFileDialog1.FileName));
-				StartSystem();
-			}
-		}
+        private void PauseSystem()
+        {
+            gbs.Pause();
+        }
 
-		private void exitToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			Application.Exit();
-		}
-		#endregion
+        private void ResumeSystem()
+        {
+            gbs.Resume();
+            elementHost1.Focus();
+        }
 
-		private void MainForm_Activated(object sender, EventArgs e)
-		{
-			if (gbs != null) gbs.Focus();
-		}
+        #endregion System Control
 
-		private void MainForm_Deactivate(object sender, EventArgs e)
-		{
-			if (gbs != null) gbs.Unfocus();
-		}
-	}
+        #region Menu Items
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                gbs.Stop();
+                if (gbSysThread != null)
+                {
+                    gbSysThread.Abort();
+                }
+                gbs.LoadFile(openFileDialog1.FileName);
+                StartSystem();
+            }
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void showLogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new LogWindow().ShowDialog();
+        }
+
+        #endregion Menu Items
+
+        private void MainForm_Activated(object sender, EventArgs e)
+        {
+            if (gbs != null)
+                gbs.Focus();
+        }
+
+        private void MainForm_Deactivate(object sender, EventArgs e)
+        {
+            if (gbs != null)
+                gbs.Unfocus();
+        }
+
+        private void showVRAMToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TilemapWindow tmw = new TilemapWindow(renderWindow);
+            tmw.Show();
+        }
+    }
 }

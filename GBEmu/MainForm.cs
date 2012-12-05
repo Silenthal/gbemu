@@ -5,6 +5,8 @@
     using System.Threading;
     using System.Windows.Forms;
     using GBEmu.Emulator;
+    using SharpDX.RawInput;
+    using SharpDX.Multimedia;
 
     public partial class MainForm : Form
     {
@@ -12,6 +14,9 @@
         private Thread gbSysThread;
         private ThreadStart sysStart;
         private WPFRenderWindow renderWindow;
+        private DeviceInfo devInfo;
+        private string defaultState;
+        private bool initial = false;
 
         public MainForm()
         {
@@ -20,7 +25,6 @@
             renderWindow.InitializeWindow(160, 144);
             gbs = new GBSystem(renderWindow, new Win32InputHandler(), new HighResTimer());
         }
-
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             gbs.Stop();
@@ -42,17 +46,6 @@
             sysStart = new ThreadStart(gbs.StartSystem);
             gbSysThread = new Thread(sysStart);
             gbSysThread.Start();
-            elementHost1.Focus();
-        }
-
-        private void PauseSystem()
-        {
-            gbs.Pause();
-        }
-
-        private void ResumeSystem()
-        {
-            gbs.Resume();
             elementHost1.Focus();
         }
 

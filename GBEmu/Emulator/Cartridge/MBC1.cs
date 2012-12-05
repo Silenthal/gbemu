@@ -1,5 +1,8 @@
 ﻿namespace GBEmu.Emulator.Cartridge
 {
+    using GBEmu.Emulator.Debug;
+    using GBEmu.Emulator.Timing;
+
 	internal class MBC1 : Cart
 	{
 		/// <summary>
@@ -31,6 +34,18 @@
 			{
 				case 0://0x0000 - 0x1FFF
 					RamEnabled = (value & 0xF) == 0xA;
+                    if (RamEnabled)
+                    {
+                        Logger.GetInstance().Log(new LogMessage() {
+                            source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "Cart RAM Enabled."
+                        });
+                    }
+                    else
+                    {
+                        Logger.GetInstance().Log(new LogMessage() {
+                            source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "Cart RAM Disabled."
+                        });
+                    }
 					break;
 				case 1://0x2000 - 0x3FFF
 					if (RamBankMode)
@@ -58,6 +73,18 @@
 					break;
 				case 3://0x6000 - 0x7FFF
 					RamBankMode = ((value & 1) != 0);
+                    if (RamBankMode)
+                    {
+                        Logger.GetInstance().Log(new LogMessage() {
+                            source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "RAM Bank Mode Enabled."
+                        });
+                    }
+                    else
+                    {
+                        Logger.GetInstance().Log(new LogMessage() {
+                            source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "RAM Bank Mode Disabled."
+                        });
+                    }
 					break;
 			}
 		}

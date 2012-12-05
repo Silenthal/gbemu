@@ -4,6 +4,6 @@
 
     public interface IInputHandler
     {
-        void PollInput(GBSystem system);
+        KeyState PollInput();
     }
 }

@@ -87,6 +87,7 @@
                 backBuffer[i] = nextFrame[i];
             }
             Scaler.ScaleImage(backBuffer, frontBuffer, baseWidth, baseHeight, baseScale);
+            Dispatcher.BeginInvoke(new BlitDelegate(Blit));
         }
 
         public void CopyTileData(uint[] newData)
@@ -99,11 +100,6 @@
             return tiles;
         }
 
-        public void BlitScreen()
-        {
-            Dispatcher.Invoke(new BlitDelegate(Blit));
-        }
-
         private delegate void BlitDelegate();
 
         private void Blit()
@@ -112,8 +108,12 @@
             if (tileMapScreen != null)
             {
                 tileMapScreen.CopyFrameData(tiles);
-                tileMapScreen.BlitScreen();
             }
+        }
+
+        public bool isDebugEnabled()
+        {
+            return tileMapScreen != null;
         }
     }
 

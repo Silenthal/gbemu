@@ -2,12 +2,11 @@
 {
     using GBEmu.Emulator.Audio;
     using GBEmu.Emulator.Cartridge;
-    using GBEmu.Emulator.Debug;
     using GBEmu.Emulator.Graphics;
     using GBEmu.Emulator.Input;
     using GBEmu.Emulator.IO;
     using GBEmu.Emulator.Timing;
-    using GBEmu.Render;
+    using GBEmu.Emulator.Debug;
 
     public enum GBSystemState
     {
@@ -16,27 +15,16 @@
         Paused
     }
 
-    public enum FocusStatus
-    {
-        Unfocused,
-        Focused
-    }
-
     public class GBSystem
     {
         #region Emulation Components
 
         private IRenderable screen;
         private IInputHandler inputHandler;
-        private ITimekeeper watch;
+        private ITimekeeper frameTimer;
+        private bool isFocused;
 
         public GBSystemState state
-        {
-            get;
-            private set;
-        }
-
-        public FocusStatus focusStatus
         {
             get;
             private set;
@@ -54,7 +42,7 @@
 			frameTimeDMG * 2.0,	//Half
 			frameTimeDMG,		//Normal
 			frameTimeDMG * 0.5,	//Double
-			0					//Limited By Screen Refresh
+			0					//Limited By Speed of Emulation
 		};
 
         private int frameLimitIndex;
@@ -85,9 +73,9 @@
         {
             screen = renderWindow;
             state = GBSystemState.Stopped;
-            focusStatus = FocusStatus.Focused;
+            isFocused = true;
             inputHandler = iInputHandler;
-            watch = timeKeeper;
+            frameTimer = timeKeeper;
             frameLimitIndex = 1;
         }
 
@@ -99,7 +87,7 @@
             audio = new GBAudio();
             video = new Video(interruptManager, screen);
             cart = CartLoader.LoadCart(loadFile);
-            input = new GBInput(interruptManager);
+            input = new GBInput(interruptManager, inputHandler);
             mmu = new MMU(interruptManager, cart, input, audio, timer, serial, video);
             cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateTime);
         }
@@ -132,26 +120,33 @@
         public void StartSystem()
         {
             state = GBSystemState.Running;
+            var frameInput = new KeyState();
             while (state != GBSystemState.Stopped)
-            {
-                if (focusStatus == FocusStatus.Focused)
+            {   
+                if (frameInput.IsPauseToggled)
                 {
-                    inputHandler.PollInput(this);
+                    TogglePause();
+                }
+                if (frameInput.IsFrameLimitToggled)
+                {
+                    ToggleFrameSpeed();
                 }
                 if (state == GBSystemState.Paused)
+                {
                     continue;
-                watch.Start();
-                cpu.RunFor(video.TimeToNextScreenBlit());
-                screen.BlitScreen();
-                while (watch.ElapsedTime() < SpeedLimits[frameLimitIndex])
+                }
+                frameTimer.Start();
+                cpu.RunFor(video.TimeToNextVBlank());
+                if (isFocused)
+                {
+                    frameInput = inputHandler.PollInput();
+                    input.UpdateInput(frameInput);
+                }
+                cpu.RunFor(video.TimeToTopOfLCD());
+                while (frameTimer.ElapsedSeconds() < SpeedLimits[frameLimitIndex])
                 {
                 }
             }
-        }
-
-        public void KeyChange(GBKeys key, bool isDown)
-        {
-            input.KeyChange(key, isDown);
         }
 
         #region Emulation Control
@@ -161,24 +156,26 @@
             state = GBSystemState.Stopped;
         }
 
-        public void Resume()
+        public void TogglePause()
         {
-            state = GBSystemState.Running;
-        }
-
-        internal void Pause()
-        {
-            state = GBSystemState.Paused;
+            if (state == GBSystemState.Paused)
+            {
+                state = GBSystemState.Running;
+            }
+            else if (state == GBSystemState.Running)
+            {
+                state = GBSystemState.Paused;
+            }
         }
 
         public void Unfocus()
         {
-            focusStatus = FocusStatus.Unfocused;
+            isFocused = false;
         }
 
         public void Focus()
         {
-            focusStatus = FocusStatus.Focused;
+            isFocused = true;
         }
 
         public void ToggleFrameSpeed()

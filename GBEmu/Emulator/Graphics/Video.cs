@@ -599,22 +599,12 @@
                     case IOPorts.LCDC:
                         if (LCDControl != data)
                         {
-                            //True if bit for 'lcdenable' is switched from 0 to 1.
                             bool lcdDisplayStatusChanged = ((LCDControl ^ data) & 0x80) != 0;
                             if (lcdDisplayStatusChanged)
                             {
-                                if ((data & 0x80) != 0)//If LCD was turned on
+                                if ((data & 0x80) != 0)
                                 {
-                                    Logger.GetInstance().Log(new LogMessage() {
-                                        source = LogMessageSource.Video, time = GlobalTimer.GetInstance().GetTime(), message = "[LY:" + LY + "]LCD Enabled."
-                                    });
                                     ResetLCD();
-                                }
-                                else
-                                {
-                                    Logger.GetInstance().Log(new LogMessage() {
-                                        source = LogMessageSource.Video, time = GlobalTimer.GetInstance().GetTime(), message = "[LY:" + LY + "]LCD Disabled."
-                                    });
                                 }
                             }
                             LCDControl = data;
@@ -1118,68 +1108,55 @@
                     DrawScanline();
                     if (Mode0_HBlankInterruptEnabled)
                     {
-                        Logger.GetInstance().Log(new LogMessage() {
-                            source = LogMessageSource.Video, time = GlobalTimer.GetInstance().GetTime(), message = "LCDC interrupt requested."
-                        });
                         interruptManager.RequestInterrupt(InterruptType.LCDC);
                     }
                 }
             }
             if (CycleCounter >= LCDDrawCycles)
             {
-                BlitScreen();
+                BlitScreen(screen.isDebugEnabled());
                 CycleCounter -= LCDDrawCycles;
             }
         }
 
-        public void BlitScreen()
+        public void BlitScreen(bool copyTileData = false)
         {
             screen.CopyFrameData(LCDMap);
-            var tileMap = new uint[16 * 24 * 8 * 8];
-            for (int TR = 0; TR < 24; ++TR)
+            if (copyTileData)
             {
-                for (int TC = 0; TC < 16; ++TC)
+                var tileMap = new uint[16 * 24 * 8 * 8];
+                for (int TR = 0; TR < 24; ++TR)
                 {
-                    var baseVRAMIndex = (TR * 0x100) + (TC * 0x10);
-                    for (int TY = 0; TY < 8; ++TY)
+                    for (int TC = 0; TC < 16; ++TC)
                     {
-                        // Index into tilemap is TR * 0x100 + TC * 0x10 + TY * 2
-                        // Index into return  is TR * 0x400 + TC * 0x08 + TY * 0x80
-                        var baseReturnIndex = (TR * 0x400) + (TC * 0x08) + (TY * 0x80);
-
-                        // Unrolled TX loop here
-                        var pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 0, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 1, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 2, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 3, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 4, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 5, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 6, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 7, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
+                        var baseVRAMIndex = (TR * 0x100) + (TC * 0x10);
+                        for (int TY = 0; TY < 8; ++TY)
+                        {
+                            // Index into tilemap is TR * 0x100 + TC * 0x10 + TY * 2
+                            // Index into return  is TR * 0x400 + TC * 0x08 + TY * 0x80
+                            var baseReturnIndex = (TR * 0x400) + (TC * 0x08) + (TY * 0x80);
+                            int pal = 0;
+                            for (int TX = 0; TX < 8; TX++)
+                            {
+                                pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, TX, TY, false, false);
+                                tileMap[baseReturnIndex++] = BGPalette_DMG[pal].Value;
+                                ++baseReturnIndex;
+                            }
+                        }
                     }
                 }
+                screen.CopyTileData(tileMap);
             }
-            screen.CopyTileData(tileMap);
         }
 
-        public int TimeToNextScreenBlit()
+        public int TimeToTopOfLCD()
         {
             return 70224 - CycleCounter;
+        }
+
+        public int TimeToNextVBlank()
+        {
+            return (70224 - 4560) - CycleCounter;
         }
 
         public uint[] WriteTileMap()

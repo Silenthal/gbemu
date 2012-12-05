@@ -4,10 +4,10 @@
     {
         void Start();
 
+        void Restart();
+
         void Stop();
 
-        double Duration();
-
-        double ElapsedTime();
+        double ElapsedSeconds();
     }
 }

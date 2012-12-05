@@ -7,15 +7,15 @@
 
     internal class HighResTimer : ITimekeeper
     {
-        private long startTime, stopTime;
-        private long frequency;
+        private long startTime = 0;
+        private long stopTime = 0;
+        private long duration = 0;
+        private long frequency = 0;
+        private bool running = false;
 
         public HighResTimer()
         {
-            startTime = 0;
-            stopTime = 0;
-
-            if (UnsafeNativeMethods.QueryPerformanceFrequency(out frequency) == false)
+            if (!UnsafeNativeMethods.QueryPerformanceFrequency(out frequency))
             {
                 throw new Win32Exception();
             }
@@ -24,24 +24,33 @@
         public void Start()
         {
             UnsafeNativeMethods.QueryPerformanceCounter(out startTime);
-            stopTime = 0;
+            running = true;
+        }
+
+        public void Restart()
+        {
+            duration = 0;
+            Start();
         }
 
         public void Stop()
         {
             UnsafeNativeMethods.QueryPerformanceCounter(out stopTime);
+            duration += stopTime - startTime;
+            running = false;
         }
 
-        public double ElapsedTime()
+        public double ElapsedSeconds()
         {
-            long tempTime;
-            UnsafeNativeMethods.QueryPerformanceCounter(out tempTime);
-            return (double)(tempTime - startTime) / (double)frequency;
-        }
-
-        public double Duration()
-        {
-            return ((double)startTime - (double)stopTime) / (double)frequency;
+            if (running)
+            {
+                UnsafeNativeMethods.QueryPerformanceCounter(out stopTime);
+                return (double)(duration + (stopTime - startTime)) / (double)frequency;
+            }
+            else
+            {
+                return (double)duration / (double)frequency;
+            }
         }
 
         private static class UnsafeNativeMethods
@@ -65,6 +74,12 @@
             [return: MarshalAs(UnmanagedType.Bool)]
             [DllImport("kernel32.dll")]
             public static extern bool QueryPerformanceFrequency(out long lpFrequency);
+        }
+
+        private enum RunState
+        {
+            Stopped,
+            Running
         }
     }
 }

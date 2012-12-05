@@ -113,26 +113,17 @@
                 case CartridgeType.ROM_R:
                 case CartridgeType.ROM_RB:
                     returnedCart = new PlainCart(romFile, FeatureList[cs]);
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), message = "Cart type " + cs + " loaded."
-                    });
                     break;
 
                 case CartridgeType.MBC1:
                 case CartridgeType.MBC1_R:
                 case CartridgeType.MBC1_RB:
                     returnedCart = new MBC1(romFile, FeatureList[cs]);
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), message = "Cart type " + cs + " loaded."
-                    });
                     break;
 
                 case CartridgeType.MBC2:
                 case CartridgeType.MBC2_B:
                     returnedCart = new MBC2(romFile, FeatureList[cs]);
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), message = "Cart type " + cs + " loaded."
-                    });
                     break;
 
                 case CartridgeType.MBC3:
@@ -141,9 +132,6 @@
                 case CartridgeType.MBC3_R:
                 case CartridgeType.MBC3_RB:
                     returnedCart = new MBC3(romFile, FeatureList[cs]);
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Cart, time = GlobalTimer.GetInstance().GetTime(), message = "Cart type " + cs + " loaded."
-                    });
                     break;
 
                 case CartridgeType.MBC5:
@@ -153,9 +141,6 @@
                 case CartridgeType.MBC5_R:
                 case CartridgeType.MBC5_RB:
                     returnedCart = new MBC5(romFile, FeatureList[cs]);
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Memory, time = GlobalTimer.GetInstance().GetTime(), message = "Cart type " + cs + " loaded."
-                    });
                     break;
 
                 default:
@@ -164,6 +149,7 @@
 
             #endregion MBC
 
+            Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), "Cart type " + cs + " loaded."));
             return returnedCart;
         }
     }
@@ -278,9 +264,6 @@
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Failed Cart Read."
-                });
                 return 0xFF;
             }
         }
@@ -294,9 +277,7 @@
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Disabled RAM Read Attempt."
-                });
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "Disabled RAM Read Attempt"));
                 return 0xFF;
             }
         }
@@ -312,12 +293,6 @@
             {
                 CartRamWrite(position, value);
             }
-            else
-            {
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Failed Cart Write."
-                });
-            }
         }
 
         protected abstract void MBCWrite(int position, byte value);
@@ -328,18 +303,14 @@
             {
                 if ((position - 0xA000) >= CartRam.Length)
                 {
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "RAM Write Failed"
-                    });
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "RAM Write Failed"));
                     return;
                 }
                 CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Disabled RAM Write Attempt."
-                });
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "Disabled RAM Write Attempt[" + value.ToString("X2") + "]."));
             }
         }
     }

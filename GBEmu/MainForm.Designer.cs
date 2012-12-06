@@ -38,6 +38,7 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.elementHost1 = new System.Windows.Forms.Integration.ElementHost();
             this.wpfRenderWindow1 = new GBEmu.WPFRenderWindow();
+            this.showMonitorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -81,7 +82,8 @@
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showLogToolStripMenuItem,
-            this.showVRAMToolStripMenuItem});
+            this.showVRAMToolStripMenuItem,
+            this.showMonitorToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -113,6 +115,13 @@
             this.elementHost1.TabIndex = 1;
             this.elementHost1.Text = "elementHost1";
             this.elementHost1.Child = this.wpfRenderWindow1;
+            // 
+            // showMonitorToolStripMenuItem
+            // 
+            this.showMonitorToolStripMenuItem.Name = "showMonitorToolStripMenuItem";
+            this.showMonitorToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.showMonitorToolStripMenuItem.Text = "Show Monitor";
+            this.showMonitorToolStripMenuItem.Click += new System.EventHandler(this.showMonitorToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -148,6 +157,7 @@
         private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showLogToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showVRAMToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showMonitorToolStripMenuItem;
     }
 }
 

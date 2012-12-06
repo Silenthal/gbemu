@@ -2,11 +2,11 @@
 {
     using GBEmu.Emulator.Audio;
     using GBEmu.Emulator.Cartridge;
+    using GBEmu.Emulator.Debug;
     using GBEmu.Emulator.Graphics;
     using GBEmu.Emulator.Input;
     using GBEmu.Emulator.IO;
     using GBEmu.Emulator.Timing;
-    using GBEmu.Emulator.Debug;
 
     public enum GBSystemState
     {
@@ -122,7 +122,7 @@
             state = GBSystemState.Running;
             var frameInput = new KeyState();
             while (state != GBSystemState.Stopped)
-            {   
+            {
                 if (frameInput.IsPauseToggled)
                 {
                     TogglePause();
@@ -135,6 +135,7 @@
                 {
                     continue;
                 }
+                Profiler.GetInstance().Restart("Main CPU");
                 frameTimer.Start();
                 cpu.RunFor(video.TimeToNextVBlank());
                 if (isFocused)
@@ -146,6 +147,7 @@
                 while (frameTimer.ElapsedSeconds() < SpeedLimits[frameLimitIndex])
                 {
                 }
+                GBMonitor.CPUTime = Profiler.GetInstance().StopAndGetTimeAsFrameTimePercent("Main CPU");
             }
         }
 

@@ -5,7 +5,6 @@
     using System.Threading;
     using System.Windows.Forms;
     using GBEmu.Emulator;
-    using SharpDX.RawInput;
     using SharpDX.Multimedia;
 
     public partial class MainForm : Form
@@ -14,9 +13,6 @@
         private Thread gbSysThread;
         private ThreadStart sysStart;
         private WPFRenderWindow renderWindow;
-        private DeviceInfo devInfo;
-        private string defaultState;
-        private bool initial = false;
 
         public MainForm()
         {
@@ -25,6 +21,20 @@
             renderWindow.InitializeWindow(160, 144);
             gbs = new GBSystem(renderWindow, new Win32InputHandler(), new HighResTimer());
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            switch(m.Msg)
+            {
+                case 0x219:// WM_DEVICECHANGE
+                    {
+                        // TODO: Handle controller hook/unhook
+                        break;
+                    }
+            }
+            base.WndProc(ref m);
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             gbs.Stop();
@@ -93,8 +103,12 @@
 
         private void showVRAMToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            TilemapWindow tmw = new TilemapWindow(renderWindow);
-            tmw.Show();
+            new TilemapWindow(renderWindow).Show();
+        }
+
+        private void showMonitorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new MonitorForm().Show();
         }
     }
 }

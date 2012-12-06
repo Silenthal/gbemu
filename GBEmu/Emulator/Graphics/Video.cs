@@ -1121,6 +1121,7 @@
 
         public void BlitScreen(bool copyTileData = false)
         {
+            Profiler.GetInstance().Restart("Vid");
             screen.CopyFrameData(LCDMap);
             if (copyTileData)
             {
@@ -1140,13 +1141,13 @@
                             {
                                 pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, TX, TY, false, false);
                                 tileMap[baseReturnIndex++] = BGPalette_DMG[pal].Value;
-                                ++baseReturnIndex;
                             }
                         }
                     }
                 }
                 screen.CopyTileData(tileMap);
             }
+            GBMonitor.BlitTime = Profiler.GetInstance().StopAndGetTimeAsFrameTimePercent("Vid");
         }
 
         public int TimeToTopOfLCD()

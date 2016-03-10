@@ -4,6 +4,7 @@
 
     internal class GBAudio : TimedIODevice
     {
+
         public GBAudio()
         {
         }
@@ -19,6 +20,8 @@
 
         public override void UpdateTime(int cycles)
         {
+            // Depending on time...
+
         }
     }
 }

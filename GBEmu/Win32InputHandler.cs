@@ -1,10 +1,10 @@
 ﻿namespace GBEmu
 {
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Windows.Forms;
     using GBEmu.Emulator.Input;
     using SharpDX.DirectInput;
+    using System;
+    using System.Runtime.InteropServices;
+    using Keys = System.Windows.Input.Key;
 
     public struct KeySettings
     {
@@ -41,7 +41,7 @@
             keySettings.Keyboard_Button_A = Keys.X;
             keySettings.Keyboard_Button_B = Keys.Z;
             keySettings.Keyboard_Button_Start = Keys.Return;
-            keySettings.Keyboard_Button_Select = Keys.Shift;
+            keySettings.Keyboard_Button_Select = Keys.RightShift;
             keySettings.Keyboard_Button_Up = Keys.Up;
             keySettings.Keyboard_Button_Down = Keys.Down;
             keySettings.Keyboard_Button_Left = Keys.Left;

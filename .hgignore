@@ -1,6 +1,0 @@
-syntax: glob
-GBEmu/obj/
-GBEmu/bin/
-GBEmu/*.user
-*.suo
-*.sln.docstates.suo

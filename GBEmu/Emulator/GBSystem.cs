@@ -1,20 +1,13 @@
-﻿namespace GBEmu.Emulator
+﻿using GBEmu.Emulator.Audio;
+using GBEmu.Emulator.Cartridge;
+using GBEmu.Emulator.Debug;
+using GBEmu.Emulator.Graphics;
+using GBEmu.Emulator.Input;
+using GBEmu.Emulator.IO;
+using GBEmu.Emulator.Timing;
+
+namespace GBEmu.Emulator
 {
-    using GBEmu.Emulator.Audio;
-    using GBEmu.Emulator.Cartridge;
-    using GBEmu.Emulator.Debug;
-    using GBEmu.Emulator.Graphics;
-    using GBEmu.Emulator.Input;
-    using GBEmu.Emulator.IO;
-    using GBEmu.Emulator.Timing;
-
-    public enum GBSystemState
-    {
-        Stopped,
-        Running,
-        Paused
-    }
-
     public class GBSystem
     {
         #region Emulation Components
@@ -38,12 +31,12 @@
         private static double frameTimeDMG = 1 / framesPerSecondDMG;
 
         private static double[] SpeedLimits =
-		{
-			frameTimeDMG * 2.0,	//Half
-			frameTimeDMG,		//Normal
-			frameTimeDMG * 0.5,	//Double
-			0					//Limited By Speed of Emulation
-		};
+        {
+            frameTimeDMG * 2.0,	//Half
+            frameTimeDMG,		//Normal
+            frameTimeDMG * 0.5,	//Double
+            0					//Limited By Speed of Emulation
+        };
 
         private int frameLimitIndex;
 

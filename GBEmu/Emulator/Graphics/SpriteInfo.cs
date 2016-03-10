@@ -3,7 +3,7 @@
     /// <summary>
     /// Contains information about a sprite in the OAM table.
     /// </summary>
-    internal struct SpriteInfo
+    public struct SpriteInfo
     {
         public int OAMIndex;
 

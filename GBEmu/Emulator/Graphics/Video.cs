@@ -1,15 +1,10 @@
-﻿namespace GBEmu.Emulator.Graphics
+﻿using GBEmu.Emulator.Debug;
+using GBEmu.Emulator.IO;
+using GBEmu.Emulator.Timing;
+
+namespace GBEmu.Emulator.Graphics
 {
-    using GBEmu.Emulator.Debug;
-    using GBEmu.Emulator.IO;
-    using GBEmu.Emulator.Timing;
-
-    internal class DMGPredefColor
-    {
-        public static BGRAColor[] Colors = { BGRAColor.DMGWhite, BGRAColor.DMGLightGrey, BGRAColor.DMGDarkGrey, BGRAColor.DMGBlack };
-    }
-
-    internal class Video : TimedIODevice
+    public class Video : TimedIODevice
     {
         #region Video constants
 
@@ -522,6 +517,7 @@
                 {
                     case IOPorts.LCDC:
                         return LCDControl;
+
                     case IOPorts.STAT:
                         {
                             byte ffs = LCDStatus;
@@ -529,22 +525,31 @@
                         }
                     case IOPorts.SCX:
                         return ScrollX;
+
                     case IOPorts.SCY:
                         return ScrollY;
+
                     case IOPorts.LY:
                         return LY;
+
                     case IOPorts.LYC:
                         return LYCompare;
+
                     case IOPorts.BGP:
                         return BackgroundPaletteData;
+
                     case IOPorts.OBP0:
                         return ObjectPalette0Data;
+
                     case IOPorts.OBP1:
                         return ObjectPalette1Data;
+
                     case IOPorts.WX:
                         return WindowX;
+
                     case IOPorts.WY:
                         return WindowY;
+
                     default:
                         return 0xFF;
                 }
@@ -665,8 +670,12 @@
             else
             {
                 var mTime = string.Format("[LY:{0:D3}][Mode:{2}]", LY, GlobalTimer.GetInstance().GetEventCounter(), GetMode());
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Video, position = position.ToString("X"), time = GlobalTimer.GetInstance().GetTime(), message = mTime + "VRAM Write attempted during non-write period."
+                Logger.GetInstance().Log(new LogMessage()
+                {
+                    source = LogMessageSource.Video,
+                    position = position.ToString("X"),
+                    time = GlobalTimer.GetInstance().GetTime(),
+                    message = mTime + "VRAM Write attempted during non-write period."
                 });
             }
         }
@@ -680,8 +689,12 @@
             else
             {
                 var mTime = string.Format("[LY:{0:D3}][Mode:{2}]", LY, GlobalTimer.GetInstance().GetEventCounter(), GetMode());
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Video, position = position.ToString("X"), time = GlobalTimer.GetInstance().GetTime(), message = mTime + "OAM Write attempted during non-write period."
+                Logger.GetInstance().Log(new LogMessage()
+                {
+                    source = LogMessageSource.Video,
+                    position = position.ToString("X"),
+                    time = GlobalTimer.GetInstance().GetTime(),
+                    message = mTime + "OAM Write attempted during non-write period."
                 });
             }
         }
@@ -1059,8 +1072,11 @@
             }
             for (int i = 0; i < SpritesOnScanline.Length; i++)
             {
-                SpritesOnScanline[i] = new SpriteInfo() {
-                    OAMIndex = int.MaxValue, XOffset = int.MaxValue, YOffset = int.MaxValue
+                SpritesOnScanline[i] = new SpriteInfo()
+                {
+                    OAMIndex = int.MaxValue,
+                    XOffset = int.MaxValue,
+                    YOffset = int.MaxValue
                 };
             }
         }
@@ -1088,7 +1104,8 @@
         /// <returns>The pixel at the location.</returns>
         private BGRAColor GetPixel(int x, int y)
         {
-            return new BGRAColor() {
+            return new BGRAColor()
+            {
                 Value = LCDMap[(x * LCDStride) + y]
             };
         }

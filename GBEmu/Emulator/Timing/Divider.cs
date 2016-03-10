@@ -1,8 +1,8 @@
-﻿namespace GBEmu.Emulator.Timing
-{
-    using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 
-    internal class Divider : TimedIODevice
+namespace GBEmu.Emulator.Timing
+{
+    public class Divider : TimedIODevice
     {
         /// <summary>
         /// Contains the cycles that occur before the divider increments.

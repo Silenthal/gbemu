@@ -1,30 +1,10 @@
-﻿namespace GBEmu
+﻿using GBEmu.Emulator.Input;
+using SharpDX.DirectInput;
+using System;
+using Keys = System.Windows.Input.Key;
+
+namespace GBEmu
 {
-    using GBEmu.Emulator.Input;
-    using SharpDX.DirectInput;
-    using System;
-    using System.Runtime.InteropServices;
-    using Keys = System.Windows.Input.Key;
-
-    public struct KeySettings
-    {
-        public Keys Keyboard_Button_A;
-        public Keys Keyboard_Button_B;
-        public Keys Keyboard_Button_Start;
-        public Keys Keyboard_Button_Select;
-        public Keys Keyboard_Button_Up;
-        public Keys Keyboard_Button_Down;
-        public Keys Keyboard_Button_Left;
-        public Keys Keyboard_Button_Right;
-        public Keys Keyboard_Button_Reset;
-        public Keys Keyboard_Button_Pause;
-        public Keys Keyboard_Button_FrameLimit;
-        public int Controller_Button_A;
-        public int Controller_Button_B;
-        public int Controller_Button_Start;
-        public int Controller_Button_Select;
-    }
-
     public class Win32InputHandler : IInputHandler
     {
         private KeySettings keySettings;
@@ -119,15 +99,6 @@
         public bool IsKeyToggled(Keys vKey)
         {
             return (NativeMethods.GetAsyncKeyState((int)vKey) & 0x1) != 0;
-        }
-
-        private static class NativeMethods
-        {
-            [DllImport("user32.dll")]
-            public static extern short GetAsyncKeyState(int vKey);
-
-            [DllImport("user32.dll")]
-            public static extern short GetKeyState(int vKey);
         }
     }
 }

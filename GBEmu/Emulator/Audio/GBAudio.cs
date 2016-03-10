@@ -1,10 +1,9 @@
-﻿namespace GBEmu.Emulator.Audio
+﻿using GBEmu.Emulator.IO;
+
+namespace GBEmu.Emulator.Audio
 {
-    using GBEmu.Emulator.IO;
-
-    internal class GBAudio : TimedIODevice
+    public class GBAudio : TimedIODevice
     {
-
         public GBAudio()
         {
         }
@@ -21,7 +20,6 @@
         public override void UpdateTime(int cycles)
         {
             // Depending on time...
-
         }
     }
 }

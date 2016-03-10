@@ -1,8 +1,4 @@
-﻿namespace GBEmu.Render
-{
-    public class Hq3x
-    {
-        /*
+﻿/*
  * Copyright (C) 2003 Maxim Stepin ( maxst@hiend3d.com )
  *
  * Copyright (C) 2010 Cameron Zemek ( grom@zeminvaders.net)
@@ -22,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+namespace GBEmu.Render
+{
+    public class Hq3x
+    {
         private static unsafe void hq3x_32_rb(uint* sp, uint srb, uint* dp, uint drb, int Xres, int Yres)
         {
             int i, j, k;

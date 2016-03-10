@@ -1,8 +1,8 @@
-﻿namespace GBEmu.Emulator.Timing
-{
-    using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 
-    internal class TimerCounter : TimedIODevice
+namespace GBEmu.Emulator.Timing
+{
+    public class TimerCounter : TimedIODevice
     {
         private InterruptManager interruptManager;
         private const int DMG_ClockRate = 4194304;
@@ -55,12 +55,12 @@
         private int TAC_TimerCycles;
 
         private static int[] TAC_Timings = new int[4]
-		{
-			1024, //4096 Hz, updates every 1024 cycles.
-			16, //262144 Hz, updates every 16 cycles.
-			64, //65536 Hz, updates every 64 cycles.
-			256 //16384 Hz, updates every 256 cycles.
-		};
+        {
+            1024, //4096 Hz, updates every 1024 cycles.
+            16, //262144 Hz, updates every 16 cycles.
+            64, //65536 Hz, updates every 64 cycles.
+            256 //16384 Hz, updates every 256 cycles.
+        };
 
         #endregion TAC Related Variables
 
@@ -86,10 +86,13 @@
                 {
                     case IOPorts.TMA:
                         return TMA_TimerOverflowValue;
+
                     case IOPorts.TIMA:
                         return TIMA_TimerCounter;
+
                     case IOPorts.TAC:
                         return TAC_TimerControl;
+
                     default:
                         return 0xFF;
                 }

@@ -1,67 +1,32 @@
-﻿namespace GBEmu.Emulator
-{
-    using System.Runtime.InteropServices;
-    using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 
+namespace GBEmu.Emulator
+{
     /// <summary>
     /// Reads a byte from the MMU.
     /// </summary>
     /// <param name="address">The address to read from.</param>
     /// <returns>The contents of the memory location.</returns>
-    internal delegate byte ReadFromMMUDelegate(int address);
+    public delegate byte ReadFromMMUDelegate(int address);
 
     /// <summary>
     /// Writes a byte to the MMU.
     /// </summary>
     /// <param name="address">The address to write to.</param>
     /// <param name="data">The data to write.</param>
-    internal delegate void WriteToMMUDelegate(int address, byte data);
+    public delegate void WriteToMMUDelegate(int address, byte data);
 
     /// <summary>
     /// Updates the system time to reflect the cycles passed.
     /// </summary>
     /// <param name="cycles">The amount of time that has passed, in cycles.</param>
-    internal delegate void UpdateTimeDelegate(int cycles);
-
-    /// <summary>
-    /// Describes a register pair in the CPU.
-    /// </summary>
-    [StructLayout(LayoutKind.Explicit)]
-    internal struct RegisterPair
-    {
-        /// <summary>
-        /// The word value of the pair.
-        /// </summary>
-        [FieldOffset(0)]
-        public ushort w;
-
-        /// <summary>
-        /// The low value of the pair.
-        /// </summary>
-        [FieldOffset(0)]
-        public byte lo;
-
-        /// <summary>
-        /// The high value of the pair.
-        /// </summary>
-        [FieldOffset(1)]
-        public byte hi;
-    }
+    public delegate void UpdateTimeDelegate(int cycles);
 
     /// <summary>
     /// Represents a Sharp LR35902 CPU.
     /// </summary>
-    internal class CPU
+    public class CPU
     {
-        /// <summary>
-        /// Describes the state of the CPU.
-        /// </summary>
-        public enum CPUState
-        {
-            Normal,
-            Halt
-        }
-
         #region Private Members
 
         private CPUState state;
@@ -1362,7 +1327,7 @@
                             Reset(0x38);
                             break;
 
-                        #endregion Ops 0xF0-0xFF
+                            #endregion Ops 0xF0-0xFF
                     }
                     break;
             }
@@ -2457,7 +2422,7 @@
                     SetBit(ref AF.hi, 7);
                     break;
 
-                #endregion Set
+                    #endregion Set
             }
         }
 
@@ -2568,7 +2533,8 @@
         /// <returns>The little-endian word at the address</returns>
         private ushort ReadPCWord()
         {
-            RegisterPair ret = new RegisterPair() {
+            RegisterPair ret = new RegisterPair()
+            {
                 lo = ReadPC()
             };
             ret.hi = ReadPC();

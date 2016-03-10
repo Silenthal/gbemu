@@ -1,19 +1,8 @@
-﻿namespace GBEmu.Emulator.Debug
+﻿using System;
+
+namespace GBEmu.Emulator.Debug
 {
-    using System;
-
-    internal enum LogMessageSource
-    {
-        Default,
-        Video,
-        CPU,
-        Audio,
-        Memory,
-        Cart,
-        Timer
-    }
-
-    internal class LogMessage
+    public class LogMessage
     {
         public LogMessageSource source;
         public string position;
@@ -23,7 +12,6 @@
         public LogMessage()
         {
             source = LogMessageSource.Audio;
-
         }
 
         public LogMessage(LogMessageSource messageSource, string msg)

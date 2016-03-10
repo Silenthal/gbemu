@@ -1,19 +1,6 @@
 ﻿namespace GBEmu.Emulator.IO
 {
-    using System;
-
-    [Flags]
-    internal enum InterruptType : byte
-    {
-        None = 0,
-        VBlank = 0x1,
-        LCDC = 0x2,
-        Timer = 0x4,
-        Serial = 0x8,
-        Joypad = 0x10
-    }
-
-    internal class InterruptManager : IReadWriteCapable
+    public class InterruptManager : IReadWriteCapable
     {
         private const int IntFlag = 0xFF0F;
         private const int IntEnable = 0xFFFF;
@@ -128,9 +115,9 @@
         /// When an interrupt ends the HALT state, the flag isn't cleared afterwards.
         /// </remarks>
         /// <returns>The type of interrupt being handled.</returns>
-        public InterruptType FetchNextInterrupt(CPU.CPUState currentState)
+        public InterruptType FetchNextInterrupt(CPUState currentState)
         {
-            if (!InterruptMasterEnable && currentState != CPU.CPUState.Halt)
+            if (!InterruptMasterEnable && currentState != CPUState.Halt)
             {
                 return InterruptType.None;
             }

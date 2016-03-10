@@ -1,8 +1,8 @@
-﻿namespace GBEmu.Emulator.Timing
-{
-    using System;
+﻿using System;
 
-    internal class GlobalTimer
+namespace GBEmu.Emulator.Timing
+{
+    public class GlobalTimer
     {
         private long counter = 0;
         private long eventCounter = 0;

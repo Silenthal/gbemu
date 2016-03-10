@@ -48,16 +48,8 @@
       <HintPath>$(SolutionDir)Lib\SharpDX.DirectInput.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -69,17 +61,24 @@
     </ApplicationDefinition>
     <Compile Include="Emulator\Audio\GBAudio.cs" />
     <Compile Include="Emulator\Cartridge\Cart.cs" />
+    <Compile Include="Emulator\Cartridge\CartFeatures.cs" />
+    <Compile Include="Emulator\Cartridge\CartLoader.cs" />
+    <Compile Include="Emulator\Cartridge\CartridgeType.cs" />
     <Compile Include="Emulator\Cartridge\MBC1.cs" />
     <Compile Include="Emulator\Cartridge\MBC2.cs" />
     <Compile Include="Emulator\Cartridge\MBC3.cs" />
     <Compile Include="Emulator\Cartridge\MBC5.cs" />
     <Compile Include="Emulator\Cartridge\PlainCart.cs" />
     <Compile Include="Emulator\CPU.cs" />
+    <Compile Include="Emulator\CPUState.cs" />
     <Compile Include="Emulator\Debug\Logger.cs" />
     <Compile Include="Emulator\Debug\LogMessage.cs" />
+    <Compile Include="Emulator\Debug\LogMessageSource.cs" />
     <Compile Include="Emulator\Debug\Profiler.cs" />
     <Compile Include="Emulator\GBSystem.cs" />
+    <Compile Include="Emulator\GBSystemState.cs" />
     <Compile Include="Emulator\Graphics\BGRAColor.cs" />
+    <Compile Include="Emulator\Graphics\DMGPredefColor.cs" />
     <Compile Include="Emulator\Graphics\IRenderable.cs" />
     <Compile Include="Emulator\Graphics\LYCounter.cs" />
     <Compile Include="Emulator\Graphics\SpriteInfo.cs" />
@@ -88,12 +87,14 @@
     <Compile Include="Emulator\Input\IInputHandler.cs" />
     <Compile Include="Emulator\Input\KeyState.cs" />
     <Compile Include="Emulator\IO\FileIO.cs" />
+    <Compile Include="Emulator\IO\InterruptType.cs" />
     <Compile Include="Emulator\IO\InterruptManager.cs" />
     <Compile Include="Emulator\IO\IOConstants.cs" />
     <Compile Include="Emulator\IO\IODevice.cs" />
     <Compile Include="Emulator\IO\IReadWriteCapable.cs" />
     <Compile Include="Emulator\IO\MMU.cs" />
     <Compile Include="Emulator\IO\Serial.cs" />
+    <Compile Include="Emulator\RegisterPair.cs" />
     <Compile Include="Emulator\Timing\Divider.cs" />
     <Compile Include="Emulator\Timing\GBTimer.cs" />
     <Compile Include="Emulator\Timing\GlobalTimer.cs" />
@@ -101,12 +102,14 @@
     <Compile Include="Emulator\Timing\TimerCounter.cs" />
     <Compile Include="GBMonitor.cs" />
     <Compile Include="HighResTimer.cs" />
+    <Compile Include="KeySettings.cs" />
     <Compile Include="LogWindow.xaml.cs">
       <DependentUpon>LogWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="MonitorForm.xaml.cs">
       <DependentUpon>MonitorForm.xaml</DependentUpon>
     </Compile>
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="Render\Common.cs" />
     <Compile Include="Render\Hq2x.cs" />
     <Compile Include="Render\Hq3x.cs" />

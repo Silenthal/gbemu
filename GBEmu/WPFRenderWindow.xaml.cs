@@ -1,13 +1,13 @@
-﻿namespace GBEmu
-{
-    using System;
-    using System.Windows;
-    using System.Windows.Controls;
-    using System.Windows.Media;
-    using System.Windows.Media.Imaging;
-    using GBEmu.Emulator.Graphics;
-    using GBEmu.Render;
+﻿using GBEmu.Emulator.Graphics;
+using GBEmu.Render;
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
+namespace GBEmu
+{
     /// <summary>
     /// Interaction logic for WPFRenderWindow.xaml
     /// </summary>

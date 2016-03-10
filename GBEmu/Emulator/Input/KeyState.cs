@@ -119,7 +119,7 @@
             {
                 if (value)
                 {
-                    dpadState &= 0xFD; 
+                    dpadState &= 0xFD;
                 }
                 else
                 {

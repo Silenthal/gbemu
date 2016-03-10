@@ -1,12 +1,11 @@
-﻿namespace GBEmu.Emulator.Input
-{
-    using System;
-    using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 
+namespace GBEmu.Emulator.Input
+{
     /// <summary>
     /// Represents the device that handles input.
     /// </summary>
-    internal class GBInput : IReadWriteCapable
+    public class GBInput : IReadWriteCapable
     {
         private InterruptManager interruptManager;
         private IInputHandler inputHandler;
@@ -85,8 +84,8 @@
 
         public void UpdateInput(KeyState ks)
         {
-            int diff1 = 
-                (keyState.buttonState ^ ks.buttonState) & ks.buttonState | 
+            int diff1 =
+                (keyState.buttonState ^ ks.buttonState) & ks.buttonState |
                 ((keyState.dpadState ^ ks.dpadState) & ks.dpadState);
             if (diff1 != 0)
             {

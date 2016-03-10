@@ -1,9 +1,9 @@
-﻿namespace GBEmu.Emulator.Debug
-{
-    using System.Collections.Generic;
-    using GBEmu.Emulator.Timing;
+﻿using GBEmu.Emulator.Timing;
+using System.Collections.Generic;
 
-    internal class Profiler
+namespace GBEmu.Emulator.Debug
+{
+    public class Profiler
     {
         private static Profiler instance = new Profiler();
         private const double frameTime = 1d / 60d;

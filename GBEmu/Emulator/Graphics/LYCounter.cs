@@ -1,11 +1,11 @@
-﻿namespace GBEmu.Emulator.Graphics
-{
-    using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 
+namespace GBEmu.Emulator.Graphics
+{
     /// <summary>
     /// A manager for the LY counter for the display.
     /// </summary>
-    internal class LYCounter : TimedIODevice
+    public class LYCounter : TimedIODevice
     {
         public static int LineCycles = 456;
 

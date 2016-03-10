@@ -1,10 +1,10 @@
-﻿namespace GBEmu.Emulator.Cartridge
-{
-    using System;
-    using GBEmu.Emulator.Debug;
-    using GBEmu.Emulator.Timing;
+﻿using GBEmu.Emulator.Debug;
+using GBEmu.Emulator.Timing;
+using System;
 
-    internal class MBC3 : Cart
+namespace GBEmu.Emulator.Cartridge
+{
+    public class MBC3 : Cart
     {
         private bool RTCActive;
         private byte[] RTC;
@@ -139,8 +139,12 @@
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage() {
-                    source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Write during RAM disable."
+                Logger.GetInstance().Log(new LogMessage()
+                {
+                    source = LogMessageSource.Cart,
+                    position = position.ToString("X4"),
+                    time = GlobalTimer.GetInstance().GetTime(),
+                    message = "Write during RAM disable."
                 });
                 return;
             }

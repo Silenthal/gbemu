@@ -1,9 +1,9 @@
-﻿namespace GBEmu.Emulator.Timing
-{
-    using GBEmu.Emulator.IO;
-    using GBEmu.Emulator.Debug;
+﻿using GBEmu.Emulator.Debug;
+using GBEmu.Emulator.IO;
 
-    internal class GBTimer : TimedIODevice
+namespace GBEmu.Emulator.Timing
+{
+    public class GBTimer : TimedIODevice
     {
         private Divider divider;
         private TimerCounter timerCounter;
@@ -21,13 +21,19 @@
             {
                 case IOPorts.DIV:
                     return divider.Read(position);
+
                 case IOPorts.TIMA:
                 case IOPorts.TMA:
                 case IOPorts.TAC:
                     return timerCounter.Read(position);
+
                 default:
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Timer, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "Failed read."
+                    Logger.GetInstance().Log(new LogMessage()
+                    {
+                        source = LogMessageSource.Timer,
+                        time = GlobalTimer.GetInstance().GetTime(),
+                        position = position.ToString("X4"),
+                        message = "Failed read."
                     });
                     return 0xFF;
             }
@@ -48,8 +54,12 @@
                     break;
 
                 default:
-                    Logger.GetInstance().Log(new LogMessage() {
-                        source = LogMessageSource.Timer, time = GlobalTimer.GetInstance().GetTime(), position = position.ToString("X4"), message = "Failed write."
+                    Logger.GetInstance().Log(new LogMessage()
+                    {
+                        source = LogMessageSource.Timer,
+                        time = GlobalTimer.GetInstance().GetTime(),
+                        position = position.ToString("X4"),
+                        message = "Failed write."
                     });
                     break;
             }

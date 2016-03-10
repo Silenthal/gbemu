@@ -3,7 +3,7 @@
     /// <summary>
     /// Describes a read/write interface for a system device.
     /// </summary>
-    internal interface IReadWriteCapable
+    public interface IReadWriteCapable
     {
         /// <summary>
         /// Reads a byte from an address in memory.
@@ -11,6 +11,7 @@
         /// <param name="position">The address to read from.</param>
         /// <returns>The data at the address.</returns>
         byte Read(int position);
+
         /// <summary>
         /// Writes a byte to an address in memory.
         /// </summary>

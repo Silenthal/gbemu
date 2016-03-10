@@ -1,9 +1,9 @@
-﻿namespace GBEmu.Emulator.Debug
-{
-    using System;
-    using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
-    internal class Logger
+namespace GBEmu.Emulator.Debug
+{
+    public class Logger
     {
         private static readonly Lazy<Logger> instance = new Lazy<Logger>(() => new Logger());
         private List<LogMessage> messageList = new List<LogMessage>();

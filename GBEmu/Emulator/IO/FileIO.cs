@@ -1,6 +1,6 @@
 ﻿namespace GBEmu.Emulator.IO
 {
-    internal static class FileIO
+    public static class FileIO
     {
         public static byte[] LoadFile(string path)
         {

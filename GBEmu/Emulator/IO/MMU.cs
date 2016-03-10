@@ -1,12 +1,12 @@
-﻿namespace GBEmu.Emulator.IO
-{
-    using GBEmu.Emulator.Audio;
-    using GBEmu.Emulator.Cartridge;
-    using GBEmu.Emulator.Graphics;
-    using GBEmu.Emulator.Input;
-    using GBEmu.Emulator.Timing;
+﻿using GBEmu.Emulator.Audio;
+using GBEmu.Emulator.Cartridge;
+using GBEmu.Emulator.Graphics;
+using GBEmu.Emulator.Input;
+using GBEmu.Emulator.Timing;
 
-    internal class MMU : TimedIODevice
+namespace GBEmu.Emulator.IO
+{
+    public class MMU : TimedIODevice
     {
         #region System Components
 

@@ -1,9 +1,9 @@
-﻿namespace GBEmu.Emulator.Cartridge
-{
-    using GBEmu.Emulator.Debug;
-    using GBEmu.Emulator.Timing;
+﻿using GBEmu.Emulator.Debug;
+using GBEmu.Emulator.Timing;
 
-    internal class MBC5 : Cart
+namespace GBEmu.Emulator.Cartridge
+{
+    public class MBC5 : Cart
     {
         private bool IsRumble;
 
@@ -55,8 +55,12 @@
                     }
                 default:
                     {
-                        Logger.GetInstance().Log(new LogMessage() {
-                            source = LogMessageSource.Cart, position = position.ToString("X4"), time = GlobalTimer.GetInstance().GetTime(), message = "Cart Write Failed"
+                        Logger.GetInstance().Log(new LogMessage()
+                        {
+                            source = LogMessageSource.Cart,
+                            position = position.ToString("X4"),
+                            time = GlobalTimer.GetInstance().GetTime(),
+                            message = "Cart Write Failed"
                         });
                         break;
                     }

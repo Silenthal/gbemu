@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace GBEmu.Render
+﻿namespace GBEmu.Render
 {
-    class Scaler
+    public class Scaler
     {
         public static void ScaleImage(uint[] inputImage, uint[] outputImage, int baseWidth, int baseHeight, ScaleType baseScale)
         {

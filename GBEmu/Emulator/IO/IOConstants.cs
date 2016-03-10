@@ -1,6 +1,6 @@
 ﻿namespace GBEmu.Emulator.IO
 {
-    internal class IOPorts
+    public static class IOPorts
     {
         public const byte P1 = 0x0;
         public const byte SB = 0x1;

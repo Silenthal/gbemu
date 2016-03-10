@@ -4,21 +4,19 @@ namespace GBEmu.Render
 {
     public class Common
     {
-        public static uint MASK_2 = 0x0000FF00;
-        public static uint MASK_13 = 0x00FF00FF;
-        public static uint MASK_RGB = 0x00FFFFFF;
-        public static uint MASK_ALPHA = 0xFF000000;
+        public const uint MASK_2 = 0x0000FF00;
+        public const uint MASK_13 = 0x00FF00FF;
+        public const uint MASK_RGB = 0x00FFFFFF;
+        public const uint MASK_ALPHA = 0xFF000000;
 
-        public static uint Ymask = 0x00FF0000;
-        public static uint Umask = 0x0000FF00;
-        public static uint Vmask = 0x000000FF;
-        public static uint trY = 0x00300000;
-        public static uint trU = 0x00000700;
-        public static uint trV = 0x00000006;
+        public const uint Ymask = 0x00FF0000;
+        public const uint Umask = 0x0000FF00;
+        public const uint Vmask = 0x000000FF;
+        public const uint trY = 0x00300000;
+        public const uint trU = 0x00000700;
+        public const uint trV = 0x00000006;
 
         public static uint[] RGBtoYUV = new uint[16777216];
-
-        private uint YUV1, YUV2;
 
         static Common()
         {

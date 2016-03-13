@@ -4,6 +4,7 @@ using GBEmu.Emulator.Debug;
 using GBEmu.Emulator.Graphics;
 using GBEmu.Emulator.Input;
 using GBEmu.Emulator.IO;
+using GBEmu.Emulator.Memory;
 using GBEmu.Emulator.Timing;
 
 namespace GBEmu.Emulator
@@ -53,6 +54,8 @@ namespace GBEmu.Emulator
         private Serial serial;
         private CPU cpu;
         private MMU mmu;
+        private WRAM wram;
+        private HRAM hram;
 
         #endregion GB System Components
 
@@ -78,10 +81,12 @@ namespace GBEmu.Emulator
             timer = new GBTimer(interruptManager);
             serial = new Serial();
             audio = new GBAudio();
+            wram = new WRAM();
+            hram = new HRAM();
             video = new Video(interruptManager, screen);
             cart = CartLoader.LoadCart(loadFile);
             input = new GBInput(interruptManager, inputHandler);
-            mmu = new MMU(interruptManager, cart, input, audio, timer, serial, video);
+            mmu = new MMU(interruptManager, cart, input, audio, timer, serial, video, wram, hram);
             cpu = new CPU(interruptManager, mmu.Read, mmu.Write, mmu.UpdateTime);
         }
 

@@ -2,6 +2,7 @@
 using GBEmu.Emulator.Cartridge;
 using GBEmu.Emulator.Graphics;
 using GBEmu.Emulator.Input;
+using GBEmu.Emulator.Memory;
 using GBEmu.Emulator.Timing;
 
 namespace GBEmu.Emulator.IO
@@ -17,18 +18,10 @@ namespace GBEmu.Emulator.IO
         private Cart cart;
         private GBInput input;
         private GBAudio audio;
+        private WRAM wram;
+        private HRAM hram;
 
         #endregion System Components
-
-        /// <summary>
-        /// [C000-DFFF] Represents the Work RAM contained in the system.
-        /// </summary>
-        private byte[] internalWRAM;
-
-        /// <summary>
-        /// [FF80-FFFE] Represents the High RAM contained in the system.
-        /// </summary>
-        private byte[] HRAM;
 
         public MMU(InterruptManager iM,
             Cart iCart,
@@ -36,7 +29,9 @@ namespace GBEmu.Emulator.IO
             GBAudio iAudio,
             GBTimer iTimer,
             Serial iSerial,
-            Video iVideo)
+            Video iVideo,
+            WRAM iWram,
+            HRAM iHram)
         {
             interruptManager = iM;
             cart = iCart;
@@ -45,13 +40,8 @@ namespace GBEmu.Emulator.IO
             LCD = iVideo;
             serial = iSerial;
             audio = iAudio;
-            InitializeInternalAndHRAM();
-        }
-
-        public void InitializeInternalAndHRAM()
-        {
-            internalWRAM = new byte[0x2000];
-            HRAM = new byte[0x7F];
+            wram = iWram;
+            hram = iHram;
         }
 
         #region Reads
@@ -66,7 +56,7 @@ namespace GBEmu.Emulator.IO
             else if (position < 0xC000)
                 return cart.Read(position);
             else if (position < 0xE000)
-                return WorkRamRead(position);
+                return wram.Read(position);
             else if (position < 0xFE00)
                 return 0xFF;
             else if (position < 0xFEA0)
@@ -161,33 +151,13 @@ namespace GBEmu.Emulator.IO
                 }
                 else if (position < 0xFFFF)
                 {
-                    return HighRamRead(position);
+                    return hram.Read(position);
                 }
                 else
                 {
                     return interruptManager.Read(position);
                 }
             }
-        }
-
-        private byte WorkRamRead(int position)
-        {
-            if (position >= 0xC000 && position < 0xE000)
-            {
-                return internalWRAM[position - 0xC000];
-            }
-            else
-                return 0xFF;
-        }
-
-        private byte HighRamRead(int position)
-        {
-            if (position >= 0xFF80 && position < 0xFFFF)
-            {
-                return HRAM[position - 0xFF80];
-            }
-            else
-                return 0xFF;
         }
 
         #endregion Reads
@@ -204,7 +174,7 @@ namespace GBEmu.Emulator.IO
             else if (position < 0xC000)
                 cart.Write(position, value);
             else if (position < 0xE000)
-                WorkRamWrite(position, value);
+                wram.Write(position, value);
             else if (position < 0xFE00)
                 return;
             else if (position < 0xFEA0)
@@ -309,28 +279,12 @@ namespace GBEmu.Emulator.IO
                 }
                 else if (position < 0xFFFF)
                 {
-                    HighRamWrite(position, value);
+                    hram.Write(position, value);
                 }
                 else
                 {
                     interruptManager.Write(position, value);
                 }
-            }
-        }
-
-        private void WorkRamWrite(int position, byte value)
-        {
-            if (position >= 0xC000 && position < 0xE000)
-            {
-                internalWRAM[position - 0xC000] = value;
-            }
-        }
-
-        private void HighRamWrite(int position, byte value)
-        {
-            if (position >= 0xFF80 && position < 0xFFFF)
-            {
-                HRAM[position - 0xFF80] = value;
             }
         }
 

@@ -94,6 +94,8 @@
     <Compile Include="Emulator\IO\IReadWriteCapable.cs" />
     <Compile Include="Emulator\IO\MMU.cs" />
     <Compile Include="Emulator\IO\Serial.cs" />
+    <Compile Include="Emulator\Memory\HRAM.cs" />
+    <Compile Include="Emulator\Memory\WRAM.cs" />
     <Compile Include="Emulator\RegisterPair.cs" />
     <Compile Include="Emulator\Timing\Divider.cs" />
     <Compile Include="Emulator\Timing\GBTimer.cs" />

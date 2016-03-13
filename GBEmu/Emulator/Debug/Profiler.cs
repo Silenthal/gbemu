@@ -1,11 +1,12 @@
 ﻿using GBEmu.Emulator.Timing;
+using System;
 using System.Collections.Generic;
 
 namespace GBEmu.Emulator.Debug
 {
     public class Profiler
     {
-        private static Profiler instance = new Profiler();
+        private static readonly Lazy<Profiler> instance = new Lazy<Profiler>(() => new Profiler());
         private const double frameTime = 1d / 60d;
         private Dictionary<string, ITimekeeper> timeKeeper = new Dictionary<string, ITimekeeper>();
 
@@ -15,7 +16,7 @@ namespace GBEmu.Emulator.Debug
 
         public static Profiler GetInstance()
         {
-            return instance;
+            return instance.Value;
         }
 
         public void Start(string profile)

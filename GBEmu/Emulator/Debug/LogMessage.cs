@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace GBEmu.Emulator.Debug
+﻿namespace GBEmu.Emulator.Debug
 {
     public class LogMessage
     {
@@ -32,12 +30,6 @@ namespace GBEmu.Emulator.Debug
             position = readPosition;
         }
 
-        public override string ToString()
-        {
-            string src = "<" + source + ">";
-            string tm = "[" + time + "]";
-            string pos = String.IsNullOrEmpty(position) ? "" : "[" + position + "]";
-            return src + tm + pos + message;
-        }
+        public override string ToString() => $"<{source}>[{time}]{(string.IsNullOrEmpty(position) ? "" : $"[{position}]")}{message}";
     }
 }

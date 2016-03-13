@@ -8,22 +8,22 @@ namespace GBEmu
     /// </summary>
     public partial class TilemapWindow : Window
     {
-        public WPFRenderWindow renderWindow;
-        private WPFRenderWindow baseWindow;
+        public WPFRenderWindow _renderWindow;
+        private WPFRenderWindow _baseWindow;
 
         public TilemapWindow(WPFRenderWindow render)
         {
             InitializeComponent();
-            renderWindow = elementHost1;
-            renderWindow.InitializeWindow(128, 192);
-            baseWindow = render;
-            baseWindow.RegisterTilemap(renderWindow);
+            _renderWindow = renderWindow;
+            _renderWindow.InitializeWindow(128, 192);
+            _baseWindow = render;
+            _baseWindow.RegisterTilemap(_renderWindow);
         }
 
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
-            baseWindow.UnregisterTilemap();
+            _baseWindow.UnregisterTilemap();
         }
     }
 }

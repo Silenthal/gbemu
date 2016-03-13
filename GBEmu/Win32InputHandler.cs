@@ -1,6 +1,7 @@
 ﻿using GBEmu.Emulator.Input;
 using SharpDX.DirectInput;
 using System;
+using KB = System.Windows.Input.Keyboard;
 using Keys = System.Windows.Input.Key;
 
 namespace GBEmu
@@ -93,12 +94,12 @@ namespace GBEmu
 
         public bool IsKeyDown(Keys vKey)
         {
-            return (NativeMethods.GetAsyncKeyState((int)vKey) & 0x8000) != 0;
+            return KB.IsKeyDown(vKey);
         }
 
         public bool IsKeyToggled(Keys vKey)
         {
-            return (NativeMethods.GetAsyncKeyState((int)vKey) & 0x1) != 0;
+            return KB.IsKeyToggled(vKey);
         }
     }
 }

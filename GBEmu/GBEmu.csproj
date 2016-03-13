@@ -109,7 +109,6 @@
     <Compile Include="MonitorForm.xaml.cs">
       <DependentUpon>MonitorForm.xaml</DependentUpon>
     </Compile>
-    <Compile Include="NativeMethods.cs" />
     <Compile Include="Render\Common.cs" />
     <Compile Include="Render\Hq2x.cs" />
     <Compile Include="Render\Hq3x.cs" />
@@ -187,6 +186,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>mkdir "$(TargetDir)Lib"

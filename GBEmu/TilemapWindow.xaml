@@ -5,8 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GBEmu"
         mc:Ignorable="d"
-        Title="TilemapWindow" Height="400" Width="260">
+        Title="Tilemap Window" Height="400" Width="260">
     <Grid>
-        <local:WPFRenderWindow x:Name="elementHost1" Width="256" Height="384"></local:WPFRenderWindow>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <local:WPFRenderWindow Grid.Row="0" Grid.Column="0" x:Name="renderWindow" />
     </Grid>
 </Window>

@@ -45,6 +45,7 @@ namespace GBEmu
             }
             sysStart = new ThreadStart(gbs.StartSystem);
             gbSysThread = new Thread(sysStart);
+            gbSysThread.SetApartmentState(ApartmentState.STA);
             gbSysThread.Start();
             mainRenderWindow.Focus();
         }

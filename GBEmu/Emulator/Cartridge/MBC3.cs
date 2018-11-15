@@ -8,7 +8,7 @@ namespace GBEmu.Emulator.Cartridge
     {
         private bool RTCActive;
         private byte[] RTC;
-        private DateTime LastLatchTime;
+        private DateTime LastLatchTime = DateTime.MinValue;
         private byte RTCRegister;
         private byte LastLatchWrite;
 
@@ -43,8 +43,10 @@ namespace GBEmu.Emulator.Cartridge
             //Else, latch new time.
             TimeSpan s = new TimeSpan(((RTC[4] & 1) << 9) | RTC[3], RTC[2], RTC[1], RTC[0]);
             DateTime temp = DateTime.Now;
-            if (LastLatchTime != null)
+            if (LastLatchTime != DateTime.MinValue)
+            {
                 s += temp - LastLatchTime;
+            }
             LastLatchTime = temp;
             bool over = false;
             if (s > TimeSpan.FromDays(511))
@@ -77,7 +79,9 @@ namespace GBEmu.Emulator.Cartridge
                 return RTC[RTCRegister];
             }
             else
+            {
                 return base.CartRamRead(position);
+            }
         }
 
         protected override void MBCWrite(int position, byte value)
@@ -109,7 +113,9 @@ namespace GBEmu.Emulator.Cartridge
                             RTCActive = true;
                         }
                         else
+                        {
                             RTCActive = false;
+                        }
                     }
                     break;
 

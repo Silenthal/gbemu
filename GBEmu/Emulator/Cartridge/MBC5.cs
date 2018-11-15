@@ -50,7 +50,9 @@ namespace GBEmu.Emulator.Cartridge
                             IsRumble = (value & 0x08) == 1;
                         }
                         else
+                        {
                             CartRamBank = (byte)(value & 0x0F);
+                        }
                         break;
                     }
                 default:

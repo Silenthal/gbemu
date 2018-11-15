@@ -8,40 +8,24 @@ namespace GBEmu.Emulator.Cartridge
     public abstract class Cart : IReadWriteCapable
     {
         protected byte[] romFile;
-        protected int MaxRamBank;
+        private int MaxRomBank;
+        private int _romBank = 1;
+        protected int RomBank { get { return _romBank; } set { if (value < MaxRomBank) _romBank = value; } }
 
         protected bool RamEnabled = false;
-        protected int RomBank;
-        protected int MaxRomBank;
-
-        protected CartFeatures features;
-
-        protected bool BatteryPresent
-        {
-            get
-            {
-                return (features & CartFeatures.BatteryBacked) == CartFeatures.BatteryBacked;
-            }
-        }
-
-        protected bool RumblePresent
-        {
-            get
-            {
-                return (features & CartFeatures.Rumble) == CartFeatures.Rumble;
-            }
-        }
-
-        protected bool TimerPresent
-        {
-            get
-            {
-                return (features & CartFeatures.Timer) == CartFeatures.Timer;
-            }
-        }
 
         protected byte[] CartRam;
-        protected int CartRamBank;
+        protected int MaxRamBank;
+        private int _ramBank = 0;
+        protected int CartRamBank { get { return _ramBank; } set { if (value < MaxRamBank) _ramBank = value; } }
+
+        private CartFeatures features;
+
+        protected bool BatteryPresent => (features & CartFeatures.BatteryBacked) != 0;
+
+        protected bool RumblePresent => (features & CartFeatures.Rumble) != 0;
+
+        protected bool TimerPresent => (features & CartFeatures.Timer) != 0;
 
         protected Cart(byte[] inFile, CartFeatures cartFeatures)
         {
@@ -49,13 +33,12 @@ namespace GBEmu.Emulator.Cartridge
             romFile = new byte[inFile.Length];
             Array.Copy(inFile, romFile, inFile.Length);
             MaxRomBank = romFile.Length >> 14;
-            InitializeOutsideRAM();
             RomBank = 1;
+            InitializeOutsideRAM();
         }
 
         protected virtual void InitializeOutsideRAM()
         {
-            CartRamBank = 0;
             MaxRamBank = 0;
             switch (romFile[0x149])
             {
@@ -77,6 +60,7 @@ namespace GBEmu.Emulator.Cartridge
                     break;
             }
             CartRam = new byte[MaxRamBank * 0x2000];
+            CartRamBank = 0;
         }
 
         public byte[] SaveOutsideRAM()

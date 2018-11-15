@@ -65,9 +65,10 @@ namespace GBEmu.Emulator.Cartridge
                     {
                         RomBank = (RomBank & 0x60) | (value & 0x1F);
                     }
-                    if (RomBank == 0)
+                    if (RomBank == 0 || RomBank == 0x20 || RomBank == 0x40 || RomBank == 0x60)
                     {
-                        RomBank = 1;
+                        // Whenever banks $0, $20, $40, or $60 are selected, the one right after will be loaded
+                        RomBank = RomBank + 1;
                     }
                     break;
 

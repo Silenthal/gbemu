@@ -1,15 +1,19 @@
-﻿namespace GBEmu.Emulator.Debug
+﻿using GBEmu.Emulator.Timing;
+
+namespace GBEmu.Emulator.Debug
 {
     public class LogMessage
     {
         public LogMessageSource source;
-        public string position;
+        public int position;
         public string message;
         public long time;
 
         public LogMessage()
         {
             source = LogMessageSource.Audio;
+            time = GlobalTimer.GetInstance().GetTime();
+            position = -1;
         }
 
         public LogMessage(LogMessageSource messageSource, string msg)
@@ -18,18 +22,12 @@
             message = msg;
         }
 
-        public LogMessage(LogMessageSource messageSource, long messageTime, string msg)
+        public LogMessage(LogMessageSource messageSource, int readPosition, string msg)
             : this(messageSource, msg)
-        {
-            time = messageTime;
-        }
-
-        public LogMessage(LogMessageSource messageSource, long messageTime, string readPosition, string msg)
-            : this(messageSource, messageTime, msg)
         {
             position = readPosition;
         }
 
-        public override string ToString() => $"<{source}>[{time}]{(string.IsNullOrEmpty(position) ? "" : $"[{position}]")}{message}";
+        public override string ToString() => $"<{source}>[{time.ToString("D10")}]{(position < 0 ? "" : $"[{position:X4}]")}{message}";
     }
 }

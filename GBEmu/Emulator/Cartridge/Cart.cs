@@ -1,6 +1,5 @@
 ﻿using GBEmu.Emulator.Debug;
 using GBEmu.Emulator.IO;
-using GBEmu.Emulator.Timing;
 using System;
 
 namespace GBEmu.Emulator.Cartridge
@@ -32,8 +31,29 @@ namespace GBEmu.Emulator.Cartridge
             features = cartFeatures;
             romFile = new byte[inFile.Length];
             Array.Copy(inFile, romFile, inFile.Length);
-            MaxRomBank = romFile.Length >> 14;
             RomBank = 1;
+
+            int actualMax = romFile.Length >> 14;
+            int reportedMax = 0;
+            byte reportedSizeCode = romFile[HeaderConstants.RomSizeOffset];
+            if (reportedSizeCode == 0)
+            {
+                reportedMax = 0;
+            }
+            else if (reportedSizeCode >= 1 && reportedSizeCode <= 8)
+            {
+                reportedMax = 4 * reportedSizeCode;
+            }
+            else if (reportedSizeCode >= 0x52 && reportedSizeCode <= 0x54)
+            {
+                reportedMax = 64 + (8 * (reportedSizeCode - 0x52));
+            }
+            else
+            {
+                reportedMax = actualMax;
+            }
+            MaxRomBank = Math.Min(actualMax, reportedMax);
+
             InitializeOutsideRAM();
         }
 
@@ -112,7 +132,7 @@ namespace GBEmu.Emulator.Cartridge
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "Disabled RAM Read Attempt"));
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Disabled RAM Read Attempt"));
                 return 0xFF;
             }
         }
@@ -138,14 +158,14 @@ namespace GBEmu.Emulator.Cartridge
             {
                 if ((position - 0xA000) >= CartRam.Length)
                 {
-                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "RAM Write Failed"));
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "RAM Write Failed"));
                     return;
                 }
                 CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), position.ToString("X4"), "Disabled RAM Write Attempt[" + value.ToString("X2") + "]."));
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Disabled RAM Write Attempt[" + value.ToString("X2") + "]."));
             }
         }
     }

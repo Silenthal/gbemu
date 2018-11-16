@@ -11,7 +11,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <ListBox Grid.Row="0" Name="logBox"/>
+        <ListBox Grid.Row="0" Name="logBox" FontFamily="Consolas"/>
         <DockPanel Grid.Row="1" LastChildFill="False">
             <Button Content="Clear" DockPanel.Dock="Left" Click="clearMsgButton_Click"/>
             <Button Content="Close" DockPanel.Dock="Right" Click="closeButton_Click"/>

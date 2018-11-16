@@ -2,7 +2,7 @@
 {
     public enum LogMessageSource
     {
-        Default,
+        Unknown,
         Video,
         CPU,
         Audio,

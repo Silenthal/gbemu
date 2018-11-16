@@ -28,13 +28,7 @@ namespace GBEmu.Emulator.Timing
                     return timerCounter.Read(position);
 
                 default:
-                    Logger.GetInstance().Log(new LogMessage()
-                    {
-                        source = LogMessageSource.Timer,
-                        time = GlobalTimer.GetInstance().GetTime(),
-                        position = position.ToString("X4"),
-                        message = "Failed read."
-                    });
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Timer, position, "Failed read."));
                     return 0xFF;
             }
         }
@@ -54,13 +48,7 @@ namespace GBEmu.Emulator.Timing
                     break;
 
                 default:
-                    Logger.GetInstance().Log(new LogMessage()
-                    {
-                        source = LogMessageSource.Timer,
-                        time = GlobalTimer.GetInstance().GetTime(),
-                        position = position.ToString("X4"),
-                        message = "Failed write."
-                    });
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Timer, position, "Failed write."));
                     break;
             }
         }

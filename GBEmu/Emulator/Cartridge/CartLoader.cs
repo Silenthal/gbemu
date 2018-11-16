@@ -1,5 +1,4 @@
 ﻿using GBEmu.Emulator.Debug;
-using GBEmu.Emulator.Timing;
 using System.Collections.Generic;
 
 namespace GBEmu.Emulator.Cartridge
@@ -90,7 +89,7 @@ namespace GBEmu.Emulator.Cartridge
 
             #endregion MBC
 
-            Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, GlobalTimer.GetInstance().GetTime(), "Cart type " + cs + " loaded."));
+            Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, $"Cart type {cs} loaded."));
             return returnedCart;
         }
     }

@@ -145,13 +145,7 @@ namespace GBEmu.Emulator.Cartridge
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage()
-                {
-                    source = LogMessageSource.Cart,
-                    position = position.ToString("X4"),
-                    time = GlobalTimer.GetInstance().GetTime(),
-                    message = "Write during RAM disable."
-                });
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Write during RAM disable."));
                 return;
             }
         }

@@ -669,14 +669,7 @@ namespace GBEmu.Emulator.Graphics
             }
             else
             {
-                var mTime = string.Format("[LY:{0:D3}][Mode:{2}]", LY, GlobalTimer.GetInstance().GetEventCounter(), GetMode());
-                Logger.GetInstance().Log(new LogMessage()
-                {
-                    source = LogMessageSource.Video,
-                    position = position.ToString("X"),
-                    time = GlobalTimer.GetInstance().GetTime(),
-                    message = mTime + "VRAM Write attempted during non-write period."
-                });
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Video, position, $"[LY:{LY:D3}][Mode:{GetMode()}] VRAM Write attempted during non-write period."));
             }
         }
 
@@ -688,14 +681,7 @@ namespace GBEmu.Emulator.Graphics
             }
             else
             {
-                var mTime = string.Format("[LY:{0:D3}][Mode:{2}]", LY, GlobalTimer.GetInstance().GetEventCounter(), GetMode());
-                Logger.GetInstance().Log(new LogMessage()
-                {
-                    source = LogMessageSource.Video,
-                    position = position.ToString("X"),
-                    time = GlobalTimer.GetInstance().GetTime(),
-                    message = mTime + "OAM Write attempted during non-write period."
-                });
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Video, position, $"[LY:{LY:D3}][Mode:{GetMode()}] OAM Write attempted during non-write period."));
             }
         }
 

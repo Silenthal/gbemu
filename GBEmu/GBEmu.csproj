@@ -64,6 +64,7 @@
     <Compile Include="Emulator\Cartridge\CartFeatures.cs" />
     <Compile Include="Emulator\Cartridge\CartLoader.cs" />
     <Compile Include="Emulator\Cartridge\CartridgeType.cs" />
+    <Compile Include="Emulator\Cartridge\HeaderConstants.cs" />
     <Compile Include="Emulator\Cartridge\MBC1.cs" />
     <Compile Include="Emulator\Cartridge\MBC2.cs" />
     <Compile Include="Emulator\Cartridge\MBC3.cs" />

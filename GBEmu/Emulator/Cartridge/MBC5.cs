@@ -1,5 +1,4 @@
 ﻿using GBEmu.Emulator.Debug;
-using GBEmu.Emulator.Timing;
 
 namespace GBEmu.Emulator.Cartridge
 {
@@ -57,13 +56,7 @@ namespace GBEmu.Emulator.Cartridge
                     }
                 default:
                     {
-                        Logger.GetInstance().Log(new LogMessage()
-                        {
-                            source = LogMessageSource.Cart,
-                            position = position.ToString("X4"),
-                            time = GlobalTimer.GetInstance().GetTime(),
-                            message = "Cart Write Failed"
-                        });
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Cart Write Failed"));
                         break;
                     }
             }

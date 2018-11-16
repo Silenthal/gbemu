@@ -1,5 +1,4 @@
 ﻿using GBEmu.Emulator.Debug;
-using GBEmu.Emulator.Timing;
 
 namespace GBEmu.Emulator.Cartridge
 {
@@ -34,41 +33,25 @@ namespace GBEmu.Emulator.Cartridge
             {
                 case 0://0x0000 - 0x1FFF
                     RamEnabled = (value & 0xF) == 0xA;
-                    if (RamEnabled)
-                    {
-                        Logger.GetInstance().Log(new LogMessage()
-                        {
-                            source = LogMessageSource.Cart,
-                            time = GlobalTimer.GetInstance().GetTime(),
-                            position = position.ToString("X4"),
-                            message = "Cart RAM Enabled."
-                        });
-                    }
-                    else
-                    {
-                        Logger.GetInstance().Log(new LogMessage()
-                        {
-                            source = LogMessageSource.Cart,
-                            time = GlobalTimer.GetInstance().GetTime(),
-                            position = position.ToString("X4"),
-                            message = "Cart RAM Disabled."
-                        });
-                    }
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"Cart RAM {(RamEnabled ? "Enabled" : "Disabled")}."));
                     break;
 
                 case 1://0x2000 - 0x3FFF
                     if (RamBankMode)
                     {
                         RomBank = (value & 0x1F);
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In Ram Bank Mode, Bank changed to ${RomBank:X}"));
                     }
                     else
                     {
                         RomBank = (RomBank & 0x60) | (value & 0x1F);
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In regular mode, Bank changed to ${RomBank:X}"));
                     }
                     if (RomBank == 0 || RomBank == 0x20 || RomBank == 0x40 || RomBank == 0x60)
                     {
                         // Whenever banks $0, $20, $40, or $60 are selected, the one right after will be loaded
                         RomBank = RomBank + 1;
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"Bank updated to ${RomBank:X}"));
                     }
                     break;
 
@@ -76,35 +59,18 @@ namespace GBEmu.Emulator.Cartridge
                     if (RamBankMode)
                     {
                         CartRamBank = (byte)(value & 0x03);
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In Ram Bank Mode, Cart Ram Bank changed to ${CartRamBank:X}"));
                     }
                     else
                     {
                         RomBank = ((value & 0x03) << 5) | (RomBank & 0x1F);
+                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In regular mode, Bank changed to ${RomBank:X}"));
                     }
                     break;
 
                 case 3://0x6000 - 0x7FFF
                     RamBankMode = ((value & 1) != 0);
-                    if (RamBankMode)
-                    {
-                        Logger.GetInstance().Log(new LogMessage()
-                        {
-                            source = LogMessageSource.Cart,
-                            time = GlobalTimer.GetInstance().GetTime(),
-                            position = position.ToString("X4"),
-                            message = "RAM Bank Mode Enabled."
-                        });
-                    }
-                    else
-                    {
-                        Logger.GetInstance().Log(new LogMessage()
-                        {
-                            source = LogMessageSource.Cart,
-                            time = GlobalTimer.GetInstance().GetTime(),
-                            position = position.ToString("X4"),
-                            message = "RAM Bank Mode Disabled."
-                        });
-                    }
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"RAM Bank Mode {(RamBankMode ? "Enabled" : "Disabled")}."));
                     break;
             }
         }

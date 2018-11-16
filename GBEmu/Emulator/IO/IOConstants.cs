@@ -45,6 +45,7 @@
         public const byte WX = 0x4B;
         public const byte KEY1 = 0x4D;
         public const byte VBK = 0x4F;
+        public const byte BOOT = 0x50;
         public const byte HDMA1 = 0x51;
         public const byte HDMA2 = 0x52;
         public const byte HDMA3 = 0x53;

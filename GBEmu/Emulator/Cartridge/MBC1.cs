@@ -24,7 +24,7 @@ namespace GBEmu.Emulator.Cartridge
         private int _bank1 = 1;
         private int _bank2 = 0;
 
-        private int Bank1 { get => _bank1; set { _bank1 = value & 0x1F; if (_bank1 == 0) { _bank1++; } } }
+        private int Bank1 { get => _bank1; set { if ((value & 0x1F) < MaxRomBank) _bank1 = value & 0x1F; if (_bank1 == 0) { _bank1++; } } }
         private int Bank2 { get => _bank2; set { if ((value & 0x3) < MaxRamBank) _bank2 = value & 0x03; } }
 
         private int ActualRomBank => Bank1 | (Bank2 << 5);

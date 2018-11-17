@@ -32,7 +32,7 @@ namespace GBEmu.Emulator.Input
                 {
                     down2 = keyState.buttonState;
                 }
-                return (byte)(LineReadState | down2);
+                return (byte)(0b1100_0000 | LineReadState | down2);
             }
             set
             {

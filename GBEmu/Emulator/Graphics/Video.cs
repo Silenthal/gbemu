@@ -193,7 +193,7 @@ namespace GBEmu.Emulator.Graphics
         {
             get
             {
-                return (byte)(stat | GetMode());
+                return (byte)(0b1000_0000 | stat | GetMode());
             }
             set
             {
@@ -519,10 +519,8 @@ namespace GBEmu.Emulator.Graphics
                         return LCDControl;
 
                     case IOPorts.STAT:
-                        {
-                            byte ffs = LCDStatus;
-                            return LCDStatus;
-                        }
+                        return LCDStatus;
+
                     case IOPorts.SCX:
                         return ScrollX;
 

@@ -192,14 +192,40 @@ namespace GBEmu.Emulator
         /// </summary>
         public void InitializeDefaultValues()
         {
-            #region DMG-specific register variables
-
             PC.w = 0x0100;
             SP.w = 0xFFFE;
+
+            #region DMG-specific register variables
+
+            // DMGABC
             AF.w = 0x01B0;
             BC.w = 0x0013;
             DE.w = 0x00D8;
             HL.w = 0x014D;
+
+            //// DMG0
+            //AF.w = 0x0100;
+            //BC.w = 0xFF13;
+            //DE.w = 0x00C1;
+            //HL.w = 0x8403;
+
+            //// MGB
+            //AF.w = 0xFFB0;
+            //BC.w = 0x0013;
+            //DE.w = 0x00D8;
+            //HL.w = 0x014D;
+
+            //// SGB
+            //AF.w = 0x0100;
+            //BC.w = 0x0014;
+            //DE.w = 0x0000;
+            //HL.w = 0xC060;
+
+            //// SGB2
+            //AF.w = 0xFF00;
+            //BC.w = 0x0014;
+            //DE.w = 0x0000;
+            //HL.w = 0xC060;
 
             #endregion DMG-specific register variables
 

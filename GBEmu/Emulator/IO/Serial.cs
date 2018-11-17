@@ -8,7 +8,15 @@
 
         public override byte Read(int position)
         {
-            return 0xFF;
+            switch (position - 0xFF00)
+            {
+                case IOPorts.SB:
+                    return 0x00;
+                case IOPorts.SC:
+                    return 0b0111_1110;
+                default:
+                    return 0xFF;
+            }
         }
 
         public override void Write(int position, byte data)

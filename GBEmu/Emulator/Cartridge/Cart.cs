@@ -7,7 +7,7 @@ namespace GBEmu.Emulator.Cartridge
     public abstract class Cart : IReadWriteCapable
     {
         protected byte[] romFile;
-        private int MaxRomBank;
+        protected int MaxRomBank;
         private int _romBank = 1;
         protected int RomBank { get { return _romBank; } set { if (value < MaxRomBank) _romBank = value; } }
 
@@ -31,7 +31,6 @@ namespace GBEmu.Emulator.Cartridge
             features = cartFeatures;
             romFile = new byte[inFile.Length];
             Array.Copy(inFile, romFile, inFile.Length);
-            RomBank = 1;
 
             int actualMax = romFile.Length >> 14;
             int reportedMax = 0;
@@ -53,6 +52,7 @@ namespace GBEmu.Emulator.Cartridge
                 reportedMax = actualMax;
             }
             MaxRomBank = Math.Min(actualMax, reportedMax);
+            RomBank = 1;
 
             InitializeOutsideRAM();
         }
@@ -102,7 +102,7 @@ namespace GBEmu.Emulator.Cartridge
             }
         }
 
-        public byte Read(int position)
+        public virtual byte Read(int position)
         {
             position &= 0xFFFF;
             if (position < 0x4000)

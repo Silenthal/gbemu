@@ -12,9 +12,9 @@ namespace GBEmu
         {
             InitializeComponent();
             var s = Logger.GetInstance().GetMessages();
-            foreach (LogMessage st in s)
+            for (int i = 0; i < s.Count; i++)
             {
-                logBox.Items.Add(st);
+                logBox.Items.Add(s[i]);
             }
         }
 

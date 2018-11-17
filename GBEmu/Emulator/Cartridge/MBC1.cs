@@ -21,10 +21,32 @@ namespace GBEmu.Emulator.Cartridge
         /// </remarks>
         private bool RamBankMode;
 
+        private int _bank1 = 1;
+        private int _bank2 = 0;
+
+        private int Bank1 { get => _bank1; set { _bank1 = value & 0x1F; if (_bank1 == 0) { _bank1++; } } }
+        private int Bank2 { get => _bank2; set { if ((value & 0x3) < MaxRamBank) _bank2 = value & 0x03; } }
+
+        private int ActualRomBank => Bank1 | (Bank2 << 5);
+
         public MBC1(byte[] inFile, CartFeatures cartFeatures)
             : base(inFile, cartFeatures)
         {
             RamBankMode = false;
+        }
+
+        public override byte Read(int position)
+        {
+            // For MBC1, if the special ram mode is enabled, reads to bank 0
+            // will be diverted to the bank specified by bank2 << 5
+            if (RamBankMode && position < 0x4000 && MaxRomBank > 32)
+            {
+                return romFile[(Bank2 << (14 + 5)) | (position & 0x3FFF)];
+            }
+            else
+            {
+                return base.Read(position);
+            }
         }
 
         protected override void MBCWrite(int position, byte value)
@@ -37,33 +59,21 @@ namespace GBEmu.Emulator.Cartridge
                     break;
 
                 case 1://0x2000 - 0x3FFF
-                    if (RamBankMode)
-                    {
-                        RomBank = (value & 0x1F);
-                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In Ram Bank Mode, Bank changed to ${RomBank:X}"));
-                    }
-                    else
-                    {
-                        RomBank = (RomBank & 0x60) | (value & 0x1F);
-                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In regular mode, Bank changed to ${RomBank:X}"));
-                    }
-                    if (RomBank == 0 || RomBank == 0x20 || RomBank == 0x40 || RomBank == 0x60)
-                    {
-                        // Whenever banks $0, $20, $40, or $60 are selected, the one right after will be loaded
-                        RomBank = RomBank + 1;
-                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"Bank updated to ${RomBank:X}"));
-                    }
+                    Bank1 = value;
+                    RomBank = ActualRomBank;
+                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"Bank changed to ${RomBank:X}"));
                     break;
 
                 case 2://0x4000 - 0x5FFF
+                    Bank2 = value;
+                    RomBank = ActualRomBank;
                     if (RamBankMode)
                     {
-                        CartRamBank = (byte)(value & 0x03);
+                        CartRamBank = Bank2;
                         Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In Ram Bank Mode, Cart Ram Bank changed to ${CartRamBank:X}"));
                     }
                     else
                     {
-                        RomBank = ((value & 0x03) << 5) | (RomBank & 0x1F);
                         Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"In regular mode, Bank changed to ${RomBank:X}"));
                     }
                     break;
@@ -72,6 +82,47 @@ namespace GBEmu.Emulator.Cartridge
                     RamBankMode = ((value & 1) != 0);
                     Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"RAM Bank Mode {(RamBankMode ? "Enabled" : "Disabled")}."));
                     break;
+            }
+        }
+
+        protected override byte CartRamRead(int position)
+        {
+            position -= 0xA000;
+            if (RamEnabled)
+            {
+                if (RamBankMode)
+                {
+                    return CartRam[Bank2 << 13 | position];
+                }
+                else
+                {
+                    return CartRam[position];
+                }
+            }
+            else
+            {
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Disabled RAM Read Attempt"));
+                return 0xFF;
+            }
+        }
+
+        protected override void CartRamWrite(int position, byte value)
+        {
+            position -= 0xA000;
+            if (RamEnabled)
+            {
+                if (RamBankMode)
+                {
+                    CartRam[Bank2 << 13 | position] = value;
+                }
+                else
+                {
+                    CartRam[position] = value;
+                }
+            }
+            else
+            {
+                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, $"Disabled RAM Write Attempt[{value:X2}]."));
             }
         }
     }

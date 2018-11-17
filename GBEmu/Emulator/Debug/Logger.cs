@@ -12,24 +12,12 @@ namespace GBEmu.Emulator.Debug
         {
         }
 
-        public static Logger GetInstance()
-        {
-            return instance.Value;
-        }
+        public static Logger GetInstance() => instance.Value;
 
-        public void Log(LogMessage message)
-        {
-            messageList.Add(message);
-        }
+        public void Log(LogMessage message) => messageList.Add(message);
 
-        public List<LogMessage> GetMessages()
-        {
-            return messageList;
-        }
+        public List<LogMessage> GetMessages() => messageList;
 
-        public void ClearMessages()
-        {
-            messageList.Clear();
-        }
+        public void ClearMessages() => messageList.Clear();
     }
 }

@@ -26,21 +26,9 @@ namespace GBEmu.Emulator.Graphics
 
         #region LCD access permissions
 
-        private bool OAMAccessAllowed
-        {
-            get
-            {
-                return ((GetMode() & 0x2) == 0) || !LCDEnabled;
-            }
-        }
+        private bool OAMAccessAllowed => ((GetMode() & 0x2) == 0) || !LCDEnabled;
 
-        private bool VRAMAccessAllowed
-        {
-            get
-            {
-                return (GetMode() != 3) || !LCDEnabled;
-            }
-        }
+        private bool VRAMAccessAllowed => (GetMode() != 3) || !LCDEnabled;
 
         #endregion LCD access permissions
 
@@ -66,109 +54,52 @@ namespace GBEmu.Emulator.Graphics
         /// <summary>
         /// Indicates whether the LCD is on or off. Set to false to turn off the LCD, and true to turn it on.
         /// </summary>
-        private bool LCDEnabled
-        {
-            get
-            {
-                return (LCDControl & 0x80) != 0;
-            }
-        }//Bit 7
+        private bool LCDEnabled => (LCDControl & 0x80) != 0; //Bit 7
 
         /// <summary>
         /// Contains the start of the window tile map in VRAM.
         /// </summary>
-        private int WindowTileMapStart
-        {
-            get
-            {
-                return (LCDControl & 0x40) == 0 ? 0x1800 : 0x1C00;
-            }
-        }//Bit 6
+        private int WindowTileMapStart => (LCDControl & 0x40) == 0 ? 0x1800 : 0x1C00; //Bit 6
 
         /// <summary>
         /// Indicates whether the window is drawn. Set to false to disable window drawing.
         /// </summary>
-        private bool WindowEnabled
-        {
-            get
-            {
-                return (LCDControl & 0x20) != 0;
-            }
-        }//Bit 5
-
-        /// <summary>
-        /// Contains the start of the tile data table used by the BG and window, as an offset in VRAM.
-        /// </summary>
-        private int BGWinTileDataStart
-        {
-            get
-            {
-                return isSignedTileIndex ? 0x800 : 0;
-            }
-        }//Bit 4
-
-        /// <summary>
-        /// Contains the start of the BG tile map in VRAM.
-        /// </summary>
-        private int BGTileMapStart
-        {
-            get
-            {
-                return (LCDControl & 0x08) == 0 ? 0x1800 : 0x1C00;
-            }
-        }//Bit 3
-
-        /// <summary>
-        /// Indicates whether 8x16 sprites are being used.
-        /// </summary>
-        private bool Sprite8By16Mode
-        {
-            get
-            {
-                return (LCDControl & 0x04) != 0;
-            }
-        }//Bit 2
-
-        private int SpriteHeight
-        {
-            get
-            {
-                return Sprite8By16Mode ? 16 : 8;
-            }
-        }
-
-        /// <summary>
-        /// Indicates whether sprites are drawn. Set to false to disable sprite drawing.
-        /// </summary>
-        private bool SpritesEnabled
-        {
-            get
-            {
-                return (LCDControl & 0x02) != 0;
-            }
-        }//Bit 1
-
-        /// <summary>
-        /// Indicates whether the background is drawn (for DMG). Set to false to disable DMG background drawing.
-        /// </summary>
-        private bool DMGBackgroundEnabled
-        {
-            get
-            {
-                return (LCDControl & 0x01) != 0;
-            }
-        }
+        private bool WindowEnabled => (LCDControl & 0x20) != 0; //Bit 5
 
         /// <summary>
         /// Indicates whether the tile index used in the Map is interpreted as a signed index.
         /// </summary>
-        private bool isSignedTileIndex
-        {
-            get
-            {
-                return (LCDControl & 0x10) == 0;
-            }
-        }
+        private bool IsSignedTileIndex => (LCDControl & 0x10) == 0;
+
+        /// <summary>
+        /// Contains the start of the tile data table used by the BG and window, as an offset in VRAM.
+        /// </summary>
+        private int BGWinTileDataStart => IsSignedTileIndex ? 0x800 : 0; //Bit 4
+
+        /// <summary>
+        /// Contains the start of the BG tile map in VRAM.
+        /// </summary>
+        private int BGTileMapStart => (LCDControl & 0x08) == 0 ? 0x1800 : 0x1C00; //Bit 3
+
+        /// <summary>
+        /// Indicates whether 8x16 sprites are being used.
+        /// </summary>
+        private bool Sprite8By16Mode => (LCDControl & 0x04) != 0; //Bit 2
+
+        /// <summary>
+        /// Indicates the height of a sprite, based on LCDC.
+        /// </summary>
+        private int SpriteHeight => Sprite8By16Mode ? 16 : 8;
+
+        /// <summary>
+        /// Indicates whether sprites are drawn. Set to false to disable sprite drawing.
+        /// </summary>
+        private bool SpritesEnabled => (LCDControl & 0x02) != 0; //Bit 1
+
+        /// <summary>
+        /// Indicates whether the background is drawn (for DMG). Set to false to disable DMG background drawing.
+        /// </summary>
+        private bool DMGBackgroundEnabled => (LCDControl & 0x01) != 0; // Bit 0
 
         #endregion LCD Control Options
 
@@ -917,7 +848,7 @@ namespace GBEmu.Emulator.Graphics
         private void DrawTileMapPixelToLCD(int TileMapStart, byte MapPixelX, byte MapPixelY, byte LCD_X, byte LCD_Y)
         {
             byte TileIndex = VRAM[TileMapStart + ((MapPixelY >> 3) * 32) + (MapPixelX >> 3)];
-            if (isSignedTileIndex)
+            if (IsSignedTileIndex)
                 TileIndex += 0x80;
             int TileOffset = BGWinTileDataStart + (TileIndex * 0x10);
             int TilePixelColor = GetPixelPaletteNumberFromTile(TileOffset, MapPixelX & 0x7, MapPixelY & 0x7, false, false);
@@ -1115,7 +1046,7 @@ namespace GBEmu.Emulator.Graphics
             }
             if (CycleCounter >= LCDDrawCycles)
             {
-                BlitScreen(screen.isDebugEnabled());
+                BlitScreen(screen.IsDebugEnabled());
                 CycleCounter -= LCDDrawCycles;
             }
         }
@@ -1175,30 +1106,11 @@ namespace GBEmu.Emulator.Graphics
                         // Index into return  is TR * 0x400 + TC * 0x08 + TY * 0x80
                         var baseReturnIndex = (TR * 0x400) + (TC * 0x08) + (TY * 0x80);
 
-                        // Unrolled TX loop here
-                        var pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 0, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 1, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 2, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 3, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 4, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 5, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 6, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
-                        ++baseReturnIndex;
-                        pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, 7, TY, false, false);
-                        tileMap[baseReturnIndex] = BGPalette_DMG[pal].Value;
+                        for (int TX = 0; TX < 8; TX++)
+                        {
+                            int pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, TX, TY, false, false);
+                            tileMap[baseReturnIndex++] = BGPalette_DMG[pal].Value;
+                        }
                     }
                 }
             }

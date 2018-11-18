@@ -38,11 +38,11 @@ namespace GBEmu.Emulator
         /// </summary>
         private bool RepeatLastInstruction;
 
-        private ReadFromMMUDelegate ReadGB;
+        private readonly ReadFromMMUDelegate ReadGB;
 
-        private WriteToMMUDelegate WriteGB;
+        private readonly WriteToMMUDelegate WriteGB;
 
-        private UpdateTimeDelegate UpdateTimeGB;
+        private readonly UpdateTimeDelegate UpdateTimeGB;
 
         #region Interrupt Vectors
 

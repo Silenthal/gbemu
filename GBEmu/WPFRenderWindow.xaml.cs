@@ -111,7 +111,7 @@ namespace GBEmu
             }
         }
 
-        public bool isDebugEnabled()
+        public bool IsDebugEnabled()
         {
             return tileMapScreen != null;
         }

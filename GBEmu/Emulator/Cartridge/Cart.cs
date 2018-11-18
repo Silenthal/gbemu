@@ -60,7 +60,7 @@ namespace GBEmu.Emulator.Cartridge
         protected virtual void InitializeOutsideRAM()
         {
             MaxRamBank = 0;
-            switch (romFile[0x149])
+            switch (romFile[HeaderConstants.RamSizeOffset])
             {
                 case 0x00://No RAM?
                     MaxRamBank = 2;

@@ -2,7 +2,7 @@
 {
     public interface IRenderable
     {
-        bool isDebugEnabled();
+        bool IsDebugEnabled();
 
         void CopyFrameData(uint[] newData);
 

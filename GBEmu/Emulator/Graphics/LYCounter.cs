@@ -9,11 +9,7 @@ namespace GBEmu.Emulator.Graphics
     {
         public static int LineCycles = 456;
 
-        public byte LY
-        {
-            get;
-            private set;
-        }
+        public byte LY { get; private set; }
 
         public int TimeOnCurrentLine
         {
@@ -33,17 +29,9 @@ namespace GBEmu.Emulator.Graphics
 
         public event OnMode3EventHandler OnMode3;
 
-        protected virtual void OnLineChanged()
-        {
-            if (LineChanged != null)
-                LineChanged();
-        }
+        protected virtual void OnLineChanged() => LineChanged?.Invoke();
 
-        protected virtual void OnMode3Reached()
-        {
-            if (OnMode3 != null)
-                OnMode3();
-        }
+        protected virtual void OnMode3Reached() => OnMode3?.Invoke();
 
         public override void UpdateTime(int cycles)
         {
@@ -89,7 +77,9 @@ namespace GBEmu.Emulator.Graphics
                 return LY;
             }
             else
+            {
                 return 0xFF;
+            }
         }
 
         public override void Write(int position, byte data)

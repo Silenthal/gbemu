@@ -41,11 +41,11 @@ namespace GBEmu.Emulator.Cartridge
             }
             else if (reportedSizeCode >= 1 && reportedSizeCode <= 8)
             {
-                reportedMax = 4 * reportedSizeCode;
+                reportedMax = 2 << reportedSizeCode;
             }
             else if (reportedSizeCode >= 0x52 && reportedSizeCode <= 0x54)
             {
-                reportedMax = 64 + (8 * (reportedSizeCode - 0x52));
+                reportedMax = 64 + (8 << (reportedSizeCode - 0x52));
             }
             else
             {

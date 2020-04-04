@@ -117,10 +117,12 @@
         /// <returns>The type of interrupt being handled.</returns>
         public InterruptType FetchNextInterrupt(CPUState currentState)
         {
+            // Exit early if IME=0 and CPU isn't halted
             if (!InterruptMasterEnable && currentState != CPUState.Halt)
             {
                 return InterruptType.None;
             }
+
             var triggered = IE & IF;
             var returned = InterruptType.None;
 
@@ -153,8 +155,9 @@
             {
                 return returned;
             }
-            // If interrupt wakes CPU from HALT, do not disable IME
-            if (currentState != CPUState.Halt)
+
+            // If interrupt wakes CPU from HALT and IME=0, do not handle interrupt
+            if (!(currentState == CPUState.Halt && !InterruptMasterEnable))
             {
                 IF ^= (byte)returned;
                 DisableInterrupts();

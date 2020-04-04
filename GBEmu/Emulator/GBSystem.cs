@@ -28,7 +28,7 @@ namespace GBEmu.Emulator
 
         #region Emulation Speed Settings
 
-        private static double framesPerSecondDMG = (double)4194304 / (double)70224;
+        private static double framesPerSecondDMG = (double)4194304 / 70224;
         private static double frameTimeDMG = 1 / framesPerSecondDMG;
 
         private static double[] SpeedLimits =

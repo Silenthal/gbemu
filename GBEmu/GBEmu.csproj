@@ -37,15 +37,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SharpDX">
-      <SpecificVersion>False</SpecificVersion>
-      <Private>False</Private>
-      <HintPath>$(SolutionDir)Lib\SharpDX.dll</HintPath>
+    <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
     </Reference>
-    <Reference Include="SharpDX.DirectInput">
-      <SpecificVersion>False</SpecificVersion>
-      <Private>False</Private>
-      <HintPath>$(SolutionDir)Lib\SharpDX.DirectInput.dll</HintPath>
+    <Reference Include="SharpDX.DirectInput, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpDX.DirectInput.4.2.0\lib\net45\SharpDX.DirectInput.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -124,6 +120,7 @@
     <Compile Include="WPFRenderWindow.xaml.cs">
       <DependentUpon>WPFRenderWindow.xaml</DependentUpon>
     </Compile>
+    <None Include="packages.config" />
     <None Include="Render\Hq4x.cs" />
     <Compile Include="Render\Scaler.cs" />
     <Page Include="LogWindow.xaml">
@@ -193,8 +190,8 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>mkdir "$(TargetDir)Lib"
-xcopy /R /y "$(SolutionDir)Lib\*.dll" "$(TargetDir)Lib\"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

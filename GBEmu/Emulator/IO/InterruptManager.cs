@@ -153,8 +153,12 @@
             {
                 return returned;
             }
-            IF ^= (byte)returned;
-            DisableInterrupts();
+            // If interrupt wakes CPU from HALT, do not disable IME
+            if (currentState != CPUState.Halt)
+            {
+                IF ^= (byte)returned;
+                DisableInterrupts();
+            }
             return returned;
         }
     }

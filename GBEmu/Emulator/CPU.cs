@@ -2460,6 +2460,12 @@ namespace GBEmu.Emulator
             InterruptType iType = interruptManager.FetchNextInterrupt(state);
             if (iType != InterruptType.None)
             {
+                if (state == CPUState.Halt)
+                {
+                    // If interrupt wakes CPU from HALT, do not handle it
+                    state = CPUState.Normal;
+                    return;
+                }
                 ushort intVector = 0;
                 switch (iType)
                 {
@@ -2488,7 +2494,6 @@ namespace GBEmu.Emulator
                 UpdateSystemTime(8);
                 Push(PC.w);
                 PCChange(intVector);
-                interruptManager.DisableInterrupts();
                 state = CPUState.Normal;
             }
         }

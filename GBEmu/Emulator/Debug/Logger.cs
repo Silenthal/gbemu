@@ -14,7 +14,10 @@ namespace GBEmu.Emulator.Debug
 
         public static Logger GetInstance() => instance.Value;
 
-        public void Log(LogMessage message) => messageList.Add(message);
+        public void Log(LogMessage message)
+        {
+            //messageList.Add(message);
+        }
 
         public List<LogMessage> GetMessages() => messageList;
 

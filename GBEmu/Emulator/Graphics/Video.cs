@@ -1068,9 +1068,10 @@ namespace GBEmu.Emulator.Graphics
                             // Index into tilemap is TR * 0x100 + TC * 0x10 + TY * 2
                             // Index into return  is TR * 0x400 + TC * 0x08 + TY * 0x80
                             var baseReturnIndex = (TR * 0x400) + (TC * 0x08) + (TY * 0x80);
+                            int pal = 0;
                             for (int TX = 0; TX < 8; TX++)
                             {
-                                int pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, TX, TY, false, false);
+                                pal = GetPixelPaletteNumberFromTile(baseVRAMIndex, TX, TY, false, false);
                                 tileMap[baseReturnIndex++] = BGPalette_DMG[pal].Value;
                             }
                         }

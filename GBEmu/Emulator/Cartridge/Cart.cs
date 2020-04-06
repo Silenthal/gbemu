@@ -1,5 +1,4 @@
-﻿using GBEmu.Emulator.Debug;
-using GBEmu.Emulator.IO;
+﻿using GBEmu.Emulator.IO;
 using System;
 
 namespace GBEmu.Emulator.Cartridge
@@ -8,15 +7,15 @@ namespace GBEmu.Emulator.Cartridge
     {
         protected byte[] romFile;
         protected int MaxRomBank;
-        private int _romBank = 1;
-        protected int RomBank { get { return _romBank; } set { if (value < MaxRomBank) _romBank = value; } }
+
+        protected int RomBank = 1;
 
         protected bool RamEnabled = false;
 
         protected byte[] CartRam;
         protected int MaxRamBank;
-        private int _ramBank = 0;
-        protected int CartRamBank { get { return _ramBank; } set { if (value < MaxRamBank) _ramBank = value; } }
+
+        protected int CartRamBank = 0;
 
         private CartFeatures features;
 
@@ -33,8 +32,8 @@ namespace GBEmu.Emulator.Cartridge
             Array.Copy(inFile, romFile, inFile.Length);
 
             int actualMax = romFile.Length >> 14;
-            int reportedMax = 0;
             byte reportedSizeCode = romFile[HeaderConstants.RomSizeOffset];
+            int reportedMax;
             if (reportedSizeCode == 0)
             {
                 reportedMax = 0;
@@ -111,7 +110,7 @@ namespace GBEmu.Emulator.Cartridge
             }
             else if (position < 0x8000)
             {
-                return romFile[(RomBank << 14) | (position & 0x3FFF)];
+                return romFile[((RomBank << 14) | (position & 0x3FFF)) % romFile.Length];
             }
             else if (position >= 0xA000 && position < 0xC000)
             {
@@ -128,11 +127,10 @@ namespace GBEmu.Emulator.Cartridge
             position -= 0xA000;
             if (RamEnabled)
             {
-                return CartRam[(CartRamBank << 13) | position];
+                return CartRam[((CartRamBank << 13) | position) % CartRam.Length];
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Disabled RAM Read Attempt"));
                 return 0xFF;
             }
         }
@@ -154,18 +152,10 @@ namespace GBEmu.Emulator.Cartridge
 
         protected virtual void CartRamWrite(int position, byte value)
         {
+            position -= 0xA000;
             if (RamEnabled)
             {
-                if ((position - 0xA000) >= CartRam.Length)
-                {
-                    Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "RAM Write Failed"));
-                    return;
-                }
-                CartRam[(CartRamBank * 0x2000) + (position - 0xA000)] = value;
-            }
-            else
-            {
-                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Disabled RAM Write Attempt[" + value.ToString("X2") + "]."));
+                CartRam[(CartRamBank << 13 | position) % CartRam.Length] = value;
             }
         }
     }

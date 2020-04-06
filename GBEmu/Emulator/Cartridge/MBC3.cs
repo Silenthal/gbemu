@@ -1,6 +1,4 @@
-﻿using GBEmu.Emulator.Debug;
-using GBEmu.Emulator.Timing;
-using System;
+﻿using System;
 
 namespace GBEmu.Emulator.Cartridge
 {
@@ -93,7 +91,7 @@ namespace GBEmu.Emulator.Cartridge
                     break;
 
                 case 1://0x2000-0x3FFF
-                    RomBank = value & 0x7F;
+                    RomBank = value;
                     break;
 
                 case 2://0x4000-5FFF
@@ -141,11 +139,12 @@ namespace GBEmu.Emulator.Cartridge
                     RTC[RTCRegister] = value;
                 }
                 else
+                {
                     base.CartRamWrite(position, value);
+                }
             }
             else
             {
-                Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Write during RAM disable."));
                 return;
             }
         }

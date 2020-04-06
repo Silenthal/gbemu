@@ -1,3 +1,8 @@
-﻿Thanks to Martin Korth(pandocs), whose docs proved to be invaluable.
+﻿The majority of the work on this project wouldn't be possible without the following sources:
 
-Thanks to Sindre Aamås(gambatte) for gambatte's implementation of MBC2, HALT, DAA, and interrupts. 
+- Pan Docs (https://gbdev.io/pandocs/)
+- Game Boy: Complete Technical Reference (https://github.com/Gekkio/gb-ctr)
+- Mooneye-GB (https://github.com/Gekkio/mooneye-gb)
+- Blargg's Game Boy test roms (https://gbdev.gg8.se/files/roms/blargg-gb-tests/)
+- Mooneye-GB tests (https://gekkio.fi/files/mooneye-gb/latest/)
+- Gambatte (https://github.com/sinamas/gambatte)

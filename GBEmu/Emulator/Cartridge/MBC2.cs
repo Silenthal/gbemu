@@ -15,19 +15,46 @@
 
         protected override void MBCWrite(int position, byte value)
         {
-            switch (position >> 13)
+            if (position < 0x4000)
             {
-                case 0://0x0000 - 0x1FFF
+                var selector = position & 0x100;
+                if (selector == 0)
+                {
                     RamEnabled = (value & 0xF) == 0xA;
-                    break;
-
-                case 1://0x2000 - 0x3FFF
-                       //MBC2: Write ROM Bank number, if addr & 0x100 is 1
-                    if ((position & 0x100) != 0)
+                }
+                else
+                {
+                    int writeVal = value & 0xF;
+                    if (writeVal == 0)
                     {
-                        RomBank = value & 0x0F;
+                        writeVal++;
                     }
-                    break;
+                    RomBank = writeVal;
+                }
+            }
+        }
+
+        protected override byte CartRamRead(int position)
+        {
+            if (RamEnabled)
+            {
+                int readPos = position & 0x1FF;
+                int readVal = CartRam[readPos] | 0xF0;
+                return (byte)readVal;
+            }
+            else
+            {
+                return 0xFF;
+            }
+        }
+
+        protected override void CartRamWrite(int position, byte value)
+        {
+            if (RamEnabled)
+            {
+                int writePos = position & 0x1FF;
+                int writeVal = value & 0xF;
+                CartRam[writePos] = (byte)writeVal;
             }
         }
     }

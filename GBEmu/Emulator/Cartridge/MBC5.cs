@@ -1,6 +1,4 @@
-﻿using GBEmu.Emulator.Debug;
-
-namespace GBEmu.Emulator.Cartridge
+﻿namespace GBEmu.Emulator.Cartridge
 {
     public class MBC5 : Cart
     {
@@ -19,7 +17,7 @@ namespace GBEmu.Emulator.Cartridge
                 case 0:
                 case 1:
                     {
-                        RamEnabled = ((value & 0x0F) == 0x0A);
+                        RamEnabled = value == 0x0A;
                         break;
                     }
 
@@ -33,7 +31,7 @@ namespace GBEmu.Emulator.Cartridge
                 case 3:
                     {
                         //_______B ********
-                        RomBank = RomBank & 0xFF | ((value & 1) << 8);
+                        RomBank = ((value & 1) << 8) | RomBank & 0xFF;
                         break;
                     }
 
@@ -45,18 +43,17 @@ namespace GBEmu.Emulator.Cartridge
                         //MBC5: Write RAM Bank number + enable/disable rumble ****MBBB (M = 0, 1 for off/on) (B for bank)
                         if (RumblePresent)
                         {
-                            CartRamBank = (byte)(value & 0x07);
+                            CartRamBank = value & 0x07;
                             IsRumble = (value & 0x08) == 1;
                         }
                         else
                         {
-                            CartRamBank = (byte)(value & 0x0F);
+                            CartRamBank = value & 0x0F;
                         }
                         break;
                     }
                 default:
                     {
-                        Logger.GetInstance().Log(new LogMessage(LogMessageSource.Cart, position, "Cart Write Failed"));
                         break;
                     }
             }

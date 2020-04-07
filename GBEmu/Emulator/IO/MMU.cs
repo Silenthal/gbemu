@@ -58,7 +58,7 @@ namespace GBEmu.Emulator.IO
             else if (position < 0xE000)
                 return wram.Read(position);
             else if (position < 0xFE00)
-                return 0xFF;
+                return wram.Read(position - 0x2000);
             else if (position < 0xFEA0)
                 return LCD.Read(position);
             else if (position < 0xFF00)
